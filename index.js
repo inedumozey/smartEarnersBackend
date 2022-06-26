@@ -1,5 +1,5 @@
 require('dotenv').config()
-const app = require("./app")
+const app = require("./server")
 const http = require("http")
 const path = require("path")
 const debug = require("debug")

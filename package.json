@@ -1,14 +1,14 @@
 {
   "name": "smart-earners-backend",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Smart Earners RESTful API Services",
-  "main": "index.js",
+  "main": "server.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/inedumozey/smartEarnersApi.git"
+    "url": "https://github.com/inedumozey/smartEarnersBackend.git"
   },
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon server.js"
   },
   "keywords": [
     "Smart",
@@ -20,30 +20,22 @@
   "author": "Moses & Marcus",
   "license": "ISC",
   "dependencies": {
+    "@mozeyinedu/email": "^1.0.1",
     "app-root-path": "^3.0.0",
     "bcrypt": "^5.0.1",
-    "body-parser": "^1.20.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "debug": "^4.3.4",
     "dompurify": "^2.3.8",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
-    "express-session":"^5.0.0",
-    "express-validator": "^6.14.1",
-    "formidable": "^2.0.1",
+    "gridfs": "^1.0.0",
     "http-errors": "^2.0.0",
     "jsdom": "^19.0.0",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.6",
-    "mongoose-unique-validator": "^3.1.0",
     "morgan": "^1.10.0",
-    "nodemailer": "^6.7.5",
-    "nodemailer-mailgun-transport": "^2.1.4",
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0",
-    "react-router-dom": "^6.3.0",
-    "shortid": "^2.2.16",
+    "multer": "^1.4.5-lts.1",
     "winston": "^3.7.2"
   },
   "devDependencies": {

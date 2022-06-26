@@ -1,13 +1,9 @@
 const mongoose = require('mongoose')
+const MOGOURL = process.env.MONGOOSE_UR || `mongodb://localhost:27017/smartEarners`
 
-const dbURLs = {
-    development: { connectionString: process.env.MONGOOSE_URL},
-    production: { connectionString: process.env.DB_URI_PRO}
-}
-
-module.exports = () =>{
+module.exports = async() =>{
     try{
-        mongoose.connect(dbURLs.development.connectionString);
+        mongoose.connect(MOGOURL);
         console.log("Database connected")
     }
     catch(err){

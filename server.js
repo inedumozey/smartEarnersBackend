@@ -1,44 +1,45 @@
 "use strict"
 
-const createError = require("http-errors")
 const express = require("express")
 const path = require("path")
-const bodyParser = require("body-parser")
 const cors = require("cors")
 const morgan = require("morgan")
 const winston = require("./config/winstonConfig")
 const db = require('./config/db')
+const cookieParser = require('cookie-parser')
 
 const app = express();
 
 //database
 db()
 
-app.use(express.json());
+// parse requests of json type
+app.use(express.json({
+    verify: (req, res, buf)=>{
+        req.rawBody = buf
+    }
+}))
 
 // parse requests of content-type: application/x-www-form-urlencoded
 app.use(express.urlencoded({ extended: false}));
 
 // Parse cookie in app
-app.use(require('cookie-parser')(process.env.COOKIE_SECRET));
-// app.use(require('express-session')());
+app.use(cookieParser())
 
-//parse a request of content type: application/json
-app.use(bodyParser.json());
-
+// logger
 app.use(morgan('combined', { stream: winston.stream }));
 
-var corsOptions = {origin: process.env.LOCALHOST};
+// cross-origin request
+var corsOptions = {origin: process.env.FRONTEND_BASE_URL};
 app.use(cors(corsOptions))
 
+// register database model
+require('./auth/models/auth')
+require('./auth/models/passwordReset')
 
-app.use('/api/user',  require("./routes/user"));
-app.use('/api/adminuser',  require("./routes/adminUser"));
-app.use('/api/admin',  require("./routes/admin")); 
+// routes
+app.use('/auth',  require("./auth/routes/auth")); 
 
-app.use(function(req, res, next){
-    next(createError(404));
-});
 
 app.use(function(err, req, res, next){
     res.locals.message = err.message;
@@ -48,5 +49,20 @@ app.use(function(err, req, res, next){
     
 });
 
+// normalize port
+const normalizePort = (val) => {
+    let port = parseInt(val, 10)
+    if(isNaN(port))
+        return val
+    
+    if(port >= 0)
+        return port
+    
+    return false
+}
 
-module.exports = app;
+// connect server
+const PORT = normalizePort(process.env.PORT || "5000")
+const server = app.listen(PORT, ()=>{
+    console.log(`Server connected in port ${PORT}`)
+})

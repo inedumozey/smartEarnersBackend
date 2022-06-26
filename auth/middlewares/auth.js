@@ -17,7 +17,7 @@ module.exports ={
             // Verify token
             const token =authToken.split(" ")[1]
 
-            const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRETE)
+            const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRET)
             if(!data){
                 return res.status(400).json({status: false, message: "You are not authorize, please login or register"})
             }
@@ -26,7 +26,7 @@ module.exports ={
             const user = await User.findOne({_id: data.id });
 
             if(user.isBlocked){
-                return res.status(400).json({status: false, message: "This user is blocked, contact the customer service"})
+                return res.status(400).json({status: false, message: "This account is blocked, contact the customer service"})
             }
             req.user = user._id
             next()
@@ -39,7 +39,7 @@ module.exports ={
             if(err.message === "jwt expired"){
                 return res.status(400).json({ status: false, message: "You are not authorized: Please login or register"})
             }
-            return res.status(500).json({ status: false, message: err.message})
+            return res.status(500).json({ status: false, message: 'Server error, please contact customer service'})
         }
     },
 
@@ -54,7 +54,7 @@ module.exports ={
             // Verify token
             const token =authToken.split(" ")[1]
             // Verify token
-            const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRETE)
+            const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRET)
             if(!data){
                 return res.status(400).json({status: false, message: "You are not authorize, please login or register"})
             }
@@ -77,9 +77,7 @@ module.exports ={
             if(err.message === "jwt expired"){
                 return res.status(400).json({ status: false, message: "User not authorized: Please login or register"})
             }
-            return res.status(500).json({ status: false, message: "err.message"})
+            return res.status(500).json({ status: false, message: 'Server error, please contact customer service'})
         }
     }
 }
-
-// "secret or public key must be provided"

@@ -29,35 +29,45 @@ module.exports ={
            res.status(200).json({ status: true, msg: "successfull", users})
         }
         catch(err){
-            res.status(500).json({ status: false, msg: err.message})
+            res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
 
     getUser: async (req, res)=> {
        try{
         const {id } = req.params;
+        const loggedUserId = req.user
 
         //check if id is mongoose valid id
         if(!mongoose.Types.ObjectId.isValid(id)){
             return res.status(400).json({status: false, msg: `User not found!`})
         }
 
-        //find user
-        const user = await User.find({_id: id});
+        //find paramsUser
+        const paramUser = await User.findOne({_id: id});
+        if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
 
-        if(!user) res.status(404).json({status: false, msg: `User not found!`});
+        //find paramsUser
+        const loggedUser = await User.findOne({_id: loggedUserId})
 
-        res.status(200).json({status: true, msg: 'successfull', user});
+        // if loggedUser is not the owner of the paramsId or not the admin, send error
+        if(!loggedUser.isAdmin && (id !=loggedUserId)){
+            return res.status(500).send({ status: false, msg: "Access denied"})
+
+        }
+        // send the user      
+        res.status(200).json({status: true, msg: 'successfull', paramUser});
        }
 
        catch(err){
-            res.status(500).send({ status: false, msg: "Server error, please contact the admin"})
+            res.status(500).send({ status: false, msg: "Server error, please contact customer service"})
        }
     },
 
     signup: async(req, res)=>{
         try{
 
+            // sanitize all elements from the client, incase of fodgery
             const refcode = DOMPurify.sanitize(req.query.refcode);
             const data = {
                 password:  DOMPurify.sanitize(req.body.password),
@@ -127,7 +137,7 @@ module.exports ={
             }
         }
         catch(err){
-            return res.status(500).json({status: false, msg: err.message});
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -137,11 +147,14 @@ module.exports ={
            
             if(!userId){
                 return res.status(402).json({status: false, msg: "User not found"})
-
             }
 
             // fetch user
             const user = await User.findOne({_id: userId})
+
+            if(user.isBlocked){
+                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
+            }
 
             if(user.isVerified){
                 return res.status(402).json({status: false, msg: "Your account has already been verified"})
@@ -151,7 +164,7 @@ module.exports ={
             verificationLink(user, res)
         }
         catch(err){
-            return res.status(505).json({status: false, msg: "Server error! Please contact the customer service"});
+            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -167,21 +180,24 @@ module.exports ={
                 if(!user){
                     return res.status(400).json({status: false, msg: "Invalid token"})
                             
-                }else{
-                    if(user.isVerified){
-                        return res.status(200).json({status: true, msg: "Your account is already verified", isVerified: user.isVerified})
-                    }
-
-                    user.isVerified = true;
-                    user.token = "";
-                    setTimeout(async()=> await user.save(), 1000);
-
-                    return res.status(200).json({status: true, msg: "Your account is verified", isVerified: user.isVerified})
                 }
+                if(user.isBlocked){
+                    return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
+                }
+                
+                if(user.isVerified){
+                    return res.status(200).json({status: true, msg: "Your account is already verified", isVerified: user.isVerified})
+                }
+
+                user.isVerified = true;
+                user.token = "";
+                setTimeout(async()=> await user.save(), 1000);
+
+                return res.status(200).json({status: true, msg: "Your account is verified", isVerified: user.isVerified})
             }
         }
         catch(err){
-            res.status(500).json({ status: false, message: err.message})
+            res.status(500).json({ status: false, message: "Server error, please contact customer service"})
         }
     },
     
@@ -194,31 +210,36 @@ module.exports ={
 
             }
             else{
+                // find user with username or email
                 const user = await User.findOne({$or: [{email}, {username: email}]});
 
                 if(!user){
                     return res.status(400).json({status: false, msg: "User not found"});
-
-                }else{
-                    const match = await bcrypt.compare(password.toString(), user.password)
-                
-                    if(!match){
-                        console.log("password not match")
-                        return res.status(400).json({status: false, msg: "Invalid login credentials"});
-
-                    }else{
-                        const accesstoken = generateAccesstoken(user._id);
-                        const refreshtoken = generateRefreshtoken(user._id);
-
-                        setCookie(accesstoken, refreshtoken, res);
-        
-                        return res.status(200).json({status: true, msg: "You are logged in"})
-                    }
                 }
+                
+                // check if user is blocked
+                if(user.isBlocked){
+                    return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
+                }
+
+                // match provided password with the one in database
+                const match = await bcrypt.compare(password.toString(), user.password)
+            
+                if(!match){
+                    return res.status(400).json({status: false, msg: "Invalid login credentials"});
+                }
+
+                // log the user in
+                const accesstoken = generateAccesstoken(user._id);
+                const refreshtoken = generateRefreshtoken(user._id);
+
+                setCookie(accesstoken, refreshtoken, res);
+
+                return res.status(200).json({status: true, msg: "You are logged in"})
             }
         }
         catch(err){
-            return res.status(500).json({status: false, msg: err.message});
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -233,28 +254,32 @@ module.exports ={
             // Verify token
             const token =authToken.split(" ")[1]
             
-            if(token){
-                //validate token
-                const data = await jwt.verify(token, process.env.JWT_REFRESH_SECRETE);
-                
-                if(!data){
-                    return res.status(400).json({status: false, msg: "Invalid token! Please login or register"});
-                }
-                else{
-                    //generate new access token and send to client as cookie
-                    const user = await User.findOne({_id: data.id});
-
-                    const accesstoken = generateAccesstoken(user._id);
-                    const refreshtoken = generateRefreshtoken(user._id);
-
-                    setCookie(accesstoken, refreshtoken, res);
-
-                    return res.status(200).json({status: true, msg: "Access token refreshed", accesstoken})
-                }
-
-            }else{
+            if(!token){
                 return res.status(400).json({status: false, msg: "User not authenticated! Please login or register"});
             }
+
+            //validate token
+            const data = await jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+                
+            if(!data){
+                return res.status(400).json({status: false, msg: "Invalid token! Please login or register"});
+            }
+           
+            // find the user
+            const user = await User.findOne({_id: data.id});
+
+            // check if user is blocked
+            if(user.isBlocked){
+                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
+            }
+
+            // generate new accesstoken and refreshtoken and send to the client cookie
+            const accesstoken = generateAccesstoken(user._id);
+            const refreshtoken = generateRefreshtoken(user._id);
+
+            setCookie(accesstoken, refreshtoken, res);
+
+            return res.status(200).json({status: true, msg: "Access token refreshed"})
         }
         catch(err){
             if(err.message == 'invalid signature' || err.message == 'invalid token'){
@@ -264,7 +289,7 @@ module.exports ={
             if(err.message === "jwt expired"){
                 return res.status(400).json({ status: false, message: "You are not authorized: Please login or register"})
             }
-            return res.status(505).json({status: false, msg: "Server error, please contact the customer service"});
+            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -275,9 +300,16 @@ module.exports ={
             if(!email){
                 return res.status(400).json({status: false, msg: "The field is required!"});
             }
+
+            // get the user
             const user = await User.findOne({$or: [{email}, {username: email}]});
             if(!user){
                 return res.status(400).json({status: false, msg: "User not found! Please register"});
+            }
+
+            // check if user is blocked
+            if(user.isBlocked){
+                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
             }
 
             // check passwordReset collection if user already exist, then update the token
@@ -302,7 +334,7 @@ module.exports ={
             }
         }
         catch(err){
-            return res.status(505).json({status: false, msg: err.message});
+            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -356,7 +388,7 @@ module.exports ={
             return res.status(200).json({status: true, msg: "Password Changed and you logged in"})
         }   
         catch(err){
-            return res.status(505).json({status: false, msg: "Server error, please contact the customer service"});
+            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -370,23 +402,25 @@ module.exports ={
             return res.status(200).json({ status: true, msg: "You have being Logged out"})
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
 
+
+
     blockUser: async (req, res)=> {
         try{
-            let id = req.body.id
+            let {id} = req.params
 
             //check if id is mongoose valid id
             if(!mongoose.Types.ObjectId.isValid(id)){
                 return res.status(400).json({status: false, msg: "User does not exist"})
             }
             
-            // Find and Deactivate user with his/her email or id, user most not be the admin
+            // Find and block user, user most not be the admin
             const user_ = await User.findOne({_id: id})
             if(!user_){
-                return res.status(400).json({status: false, msg: "User does not exist"})
+                return res.status(400).json({status: false, msg: "User not found"})
             }
             if(user_.isAdmin){
                 return res.status(400).json({status: false, msg: "Admin's account cannot be blocked"})

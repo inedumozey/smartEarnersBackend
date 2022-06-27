@@ -26,10 +26,10 @@ module.exports ={
     getUsers: async (req, res)=> {
         try{
            const users = await User.find({});
-           res.status(200).json({ status: true, msg: "successfull", users})
+           return res.status(200).json({ status: true, msg: "successfull", data: users})
         }
         catch(err){
-            res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
 
@@ -47,7 +47,7 @@ module.exports ={
         const paramUser = await User.findOne({_id: id});
         if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
 
-        //find paramsUser
+        //find loggeduer
         const loggedUser = await User.findOne({_id: loggedUserId})
 
         // if loggedUser is not the owner of the paramsId or not the admin, send error
@@ -56,7 +56,7 @@ module.exports ={
 
         }
         // send the user      
-        res.status(200).json({status: true, msg: 'successfull', paramUser});
+        return res.status(200).json({status: true, msg: 'successfull', data: paramUser});
        }
 
        catch(err){
@@ -303,6 +303,7 @@ module.exports ={
 
             // get the user
             const user = await User.findOne({$or: [{email}, {username: email}]});
+
             if(!user){
                 return res.status(400).json({status: false, msg: "User not found! Please register"});
             }
@@ -319,19 +320,17 @@ module.exports ={
                 const passwordReset = await PasswordReset.findOneAndUpdate({userId: user._id}, {$set: {token: ran.resetToken()}}, {new: true});
                 const data = {email: user.email, passwordReset}
                 passResetLink(data, res);
-
             }
-            else{
-                // otherwise generate and save token and also save the user             
-                const passwordReset = new PasswordReset({
-                    token: ran.resetToken(),
-                    userId: user._id
-                })
 
-                await passwordReset.save()
-                const data = {email: user.email, passwordReset}
-                passResetLink(data, res);
-            }
+            // otherwise generate and save token and also save the user             
+            const passwordReset = new PasswordReset({
+                token: ran.resetToken(),
+                userId: user._id
+            })
+
+            await passwordReset.save()
+            const data = {email: user.email, passwordReset}
+            passResetLink(data, res);
         }
         catch(err){
             return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
@@ -368,8 +367,14 @@ module.exports ={
                     
             //use the token to find the user
             const user = await User.findOne({_id: token_.userId})
+
             if(!user){
                 return res.status(400).json({status: false, msg: "User not found"});
+            }
+
+            // check if user is blocked
+            if(user.isBlocked){
+                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
             }
             
             // 1. remove the token from PasswordReset model
@@ -380,6 +385,7 @@ module.exports ={
 
             await User.findOneAndUpdate({_id: token_.user}, {$set: {password: hashedPass}}, {new: true});
 
+            // login the user
             const accesstoken = generateAccesstoken(user._id);
             const refreshtoken = generateRefreshtoken(user._id);
 
@@ -405,8 +411,6 @@ module.exports ={
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
-
-
 
     blockUser: async (req, res)=> {
         try{
@@ -434,25 +438,25 @@ module.exports ={
                 }, 
                 { new: true});
 
-                return res.status(200).json({status: true, msg: "User has been blocked", user})
+                return res.status(200).json({status: true, msg: "User has been blocked", data: user})
             }
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         }
         
     },
 
     unblockUser: async (req, res)=> {
         try{
-            let id = req.body.id
+            let {id} = req.params
 
             //check if id is mongoose valid id
             if(!mongoose.Types.ObjectId.isValid(id)){
                 return res.status(400).json({status: false, msg: "User does not exist"})
             }
             
-            // Find and Deactivate user with his/her email or id, user most not be the admin
+            // Find and unblock user
             const user_ = await User.findOne({_id: id})
             if(!user_){
                 return res.status(400).json({status: false, msg: "User does not exist"})
@@ -465,27 +469,28 @@ module.exports ={
                 }, 
                 { new: true});
 
-                return res.status(200).json({status: true, msg: "User has been unblocked", user});
+                return res.status(200).json({status: true, msg: "User has been unblocked", data: user});
 
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         }
         
     },
     
     removeUnverifiedUsers: async (req, res)=> {
         try{
-            const {time} = req.body
+            const time = 60;
+
+            const expiresIn = parseInt(time); // time is in seconds
   
             if(!time || time <= 0){
                 return res.status(200).json({status: true, msg: "Unverified users allowed to stay"})
             }
 
-            const expiresIn = parseInt(time); // time is in seconds
             const currentTime = new Date().getTime() / 1000 / 60 // seconds
 
-            const users = await User.find()
+            const users = await User.find({})
 
             //loop through users are remove all unverified users after the time provided is elapsed
             for(let user of users){
@@ -507,48 +512,42 @@ module.exports ={
 
     deleteAccount: async (req, res)=> {
         try{
-            let {id} = req.params
-            const userId = req.user
+            const {id } = req.params;
+            const loggedUserId = req.user
 
             //check if id is mongoose valid id
             if(!mongoose.Types.ObjectId.isValid(id)){
-                return res.status(400).json({status: false, msg: "User does not exist"})
+                return res.status(400).json({status: false, msg: `User not found!`})
             }
-            if(userId != id){
-                return res.status(400).json({status: false, msg: "You are not allowed to delete an account that is not yours"}) 
+
+            //find paramsUser
+            const paramUser = await User.findOne({_id: id});
+            if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
+
+            //find loggeduser
+            const loggedUser = await User.findOne({_id: loggedUserId})
+
+            // if loggedUser is not the owner of the paramsId or not the admin, send error
+            if(!loggedUser.isAdmin && (id !=loggedUserId)){
+                return res.status(500).send({ status: false, msg: "Access denied"})
             }
-            
-            // Find and Deactivate user with his/her email or id, user most not be the admin
+                
+            // Find and delete the account 
             const user = await User.findByIdAndDelete({_id: id})
-            return res.status(200).json({status: true, msg: "User has been deleted", user});
 
-        }
-        catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
-        }
-        
-    },
+            // delete his deposit hx
+            //...await User.findByIdAndDelete({userId_: id})
 
-    deleteUser: async (req, res)=> {
-        try{
-            let {id} = req.params
-            const userId = req.user
+            // delete his withdrawal hx
+            //...await User.findByIdAndDelete({userId_: id})
 
-            //check if id is mongoose valid id
-            if(!mongoose.Types.ObjectId.isValid(id)){
-                return res.status(400).json({status: false, msg: "User does not exist"})
-            }
-        
-            //chech if user is the admin
-            const user_ = await User.findOne({_id: userId})
+            // delete his internal transfer hx
+            //...await User.findByIdAndDelete({userId_: id})
 
-            if(!user_.isAdmin){
-                return res.status(400).json({status: false, msg: "User are not allowed to delete this acount"})
-            }
-            
-            // Find and delete this user from the database
-            const user = await User.findByIdAndDelete({_id: id})
-            return res.status(200).json({status: true, msg: "User has been deleted", user});
+            // delete his investment hx
+            //...await User.findByIdAndDelete({userId_: id})
+
+            return res.status(200).json({status: true, msg: "User has been deleted", data: user});
 
         }
         catch(err){
@@ -568,7 +567,23 @@ module.exports ={
                     ids.push(user.id)
                 }
             }
-            const user = await User.deleteMany({_id: ids})
+
+            // delete all users
+            await User.deleteMany({_id: ids})
+
+             // delete all their deposit hx
+            //...await User.deleteMany({userId_: ids})
+
+            // delete all their withdrawal hx
+            //...await User.deleteMany({userId_: ids})
+
+            // delete all their internal transfer hx
+            //...await User.deleteMany({userId_: ids})
+
+            // delete all their investment hx
+            //...await User.deleteMany({userId_: ids})
+
+
             return res.status(200).json({status: true, msg: "All users have been deleted"})
 
         }

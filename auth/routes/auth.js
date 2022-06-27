@@ -32,11 +32,8 @@ route.get('/block-user/:id', adminAuth, authCrtl.blockUser)
 
 route.get('/unblock-user/:id', adminAuth, authCrtl.unblockUser)
 
-//only the logged in user will be able to delete his/her account
-route.get('/delete-account/:id', userAuth, authCrtl.deleteAccount)
-
-//only the admin will have access to this
-route.get('/delete-user/:id', adminAuth, authCrtl.deleteUser)
+//only the admin and logged in user will have access to this
+route.get('/delete-user/:id', userAuth, authCrtl.deleteAccount)
 
 // delete all users except the admin
 //only the admin will have access to this

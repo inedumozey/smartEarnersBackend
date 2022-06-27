@@ -35,3 +35,6 @@
 {"level":"info","message":"::1 - - [27/Jun/2022:02:42:54 +0000] \"PUT /config/update HTTP/1.1\" 200 407 \"-\" \"PostmanRuntime/7.26.8\"\n"}
 {"level":"info","message":"::1 - - [27/Jun/2022:02:44:31 +0000] \"GET /config/get HTTP/1.1\" 200 408 \"-\" \"PostmanRuntime/7.26.8\"\n"}
 {"level":"info","message":"::1 - - [27/Jun/2022:02:46:48 +0000] \"GET /config/update-logo HTTP/1.1\" 404 157 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [27/Jun/2022:02:53:28 +0000] \"PUT /config/update-contact HTTP/1.1\" - - \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [27/Jun/2022:02:53:30 +0000] \"PUT /config/update-contact HTTP/1.1\" - - \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [27/Jun/2022:02:53:53 +0000] \"PUT /config/update-contact HTTP/1.1\" - - \"-\" \"PostmanRuntime/7.26.8\"\n"}

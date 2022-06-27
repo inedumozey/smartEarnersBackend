@@ -21,11 +21,11 @@ module.exports ={
                 // create the default
                 const newConfig = new Config({})
                 const configs = await newConfig.save()
-                return res.status(200).json({ status: true, msg: "Config initiated", data: configs})
+                return res.status(200).json({ status: true, msg: "Config updated", data: configs})
             }
 
             // otherwise, get the existing ones
-            return res.status(200).json({ status: true, msg: "Config exist already", data: config})
+            return res.status(200).json({ status: true, msg: "Config updated", data: config})
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
@@ -43,11 +43,11 @@ module.exports ={
                 // create the default
                 const newConfig = new Config({})
                 const configs = await newConfig.save()
-                return res.status(200).json({ status: true, msg: "Config initiated", data: configs})
+                return res.status(200).json({ status: true, msg: "Config updated", data: configs})
             }
 
             // otherwise, get the existing ones
-            return res.status(200).json({ status: true, msg: "Existing Config", data: config})
+            return res.status(200).json({ status: true, msg: "Config updated", data: config})
 
         }
         catch(err){
@@ -63,15 +63,19 @@ module.exports ={
                 whatWeDo:  DOMPurify.sanitize(req.body.whatWeDo),
                 customerSupport:  DOMPurify.sanitize(req.body.customerSupport),
                 unverifyUserLifeSpan:  DOMPurify.sanitize(req.body.unverifyUserLifeSpan),
-                convertionRate:  DOMPurify.sanitize(req.body.convertionRate),
+                conversionRate:  DOMPurify.sanitize(req.body.conversionRate),
                 nativeCurrency:  DOMPurify.sanitize(req.body.nativeCurrency),
                 tradeCurrency:  DOMPurify.sanitize(req.body.tradeCurrency),
                 majorBrandColor:  DOMPurify.sanitize(req.body.majorBrandColor),
                 minorBrandColor:  DOMPurify.sanitize(req.body.minorBrandColor),
+                verifyEmail:  DOMPurify.sanitize(req.body.verifyEmail),
             }
 
             const resolveCustomerSupport =()=>{
                 return data.customerSupport === 'yes' ? 'yes' : 'no'
+            };
+            const resolveVerifyEmail =()=>{
+                return data.verifyEmail === 'yes' ? 'yes' : 'no'
             }
 
             const modifiedData = {
@@ -80,13 +84,12 @@ module.exports ={
                 whatWeDo: data.whatWeDo,
                 customerSupport: resolveCustomerSupport(),
                 unverifyUserLifeSpan: parseInt(data.unverifyUserLifeSpan),
-                convertionRate: parseInt(data.convertionRate),
+                conversionRate: parseInt(data.conversionRate),
                 nativeCurrency: data.nativeCurrency.toUpperCase(),
                 tradeCurrency: data.tradeCurrency.toUpperCase(),
                 majorBrandColor: data.majorBrandColor,
-                minorBrandColor: data.minorBrandColor,
+                verifyEmail: resolveVerifyEmail(),
             }
-
 
             // get all config
             const config = await Config.find({});
@@ -98,7 +101,7 @@ module.exports ={
                 const newConfig = new Config( modifiedData )
                 const configs = await newConfig.save();
                 
-                return res.status(200).json({ status: true, msg: "Config initiated", data: configs})
+                return res.status(200).json({ status: true, msg: "Config updated", data: configs})
             }
 
             //get the first and only id
@@ -107,18 +110,34 @@ module.exports ={
             //update config
             const configs = await Config.findByIdAndUpdate({_id: id}, {$set: modifiedData }, {new: true});
 
-            return res.status(200).json({ status: true, msg: "Config exist already", data: configs})
+            return res.status(200).json({ status: true, msg: "Config updated", data: configs})
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
 
     updateContact: async (req, res)=> {
         try{
-            const contact = DOMPurify.sanitize(JSON.stringify(req.body.contacts));
-            console.log(contact)
-                
+            const contacts = JSON.parse(DOMPurify.sanitize(JSON.stringify(req.body.contacts)));
+            
+            // get all config
+            const config = await Config.find({});
+
+            if(config.length < 1){
+                //add contact
+                const newConfig = new Config({contacts: [...contacts]});
+                newConfig.save()
+
+                return res.status(200).json({ status: true, msg: "contacts updated", data: newConfig})
+
+            }
+
+            // loop through contacts from form, and push to contacts in config database without duplicate 
+            await Config.findByIdAndUpdate({_id: config[0].id}, {$set: {contacts: contacts}}, {new: true})
+
+            const config_ = await Config.find({});
+            return res.status(200).json({ status: true, msg: "contacts updated", data: config_})
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})

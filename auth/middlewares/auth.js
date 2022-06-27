@@ -69,6 +69,9 @@ module.exports ={
 
             // Use the data to get the user from User collection
             const user = await User.findOne({_id: data.id });
+            if(!user){
+                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+            }
 
             if(user.isAdmin){
                 req.user = user._id
@@ -86,7 +89,7 @@ module.exports ={
             if(err.message === "jwt expired"){
                 return res.status(400).json({ status: false, msg: "User not authorized: Please login or register"})
             }
-            return res.status(500).json({ status: false, msg: 'Server error, please contact customer service'})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     }
 }

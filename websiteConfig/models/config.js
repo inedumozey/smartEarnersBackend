@@ -28,9 +28,9 @@ const schema = new mongoose.Schema(
         },
         unverifyUserLifeSpan:{
             type: String,
-            default: 120 // 2419200 - 28days
+            default: 0 // stays forever
         },
-        convertionRate: {
+        conversionRate: {
             type: String,
             default: "500" // 1 USD === 500 SEC
         },
@@ -50,6 +50,11 @@ const schema = new mongoose.Schema(
             type: String,
             default: "rgb(241 173 0)"
         },
+        verifyEmail: {
+            type: String,
+            default: 'no'
+        },
+        contacts: []
     },
     {
         timestamps: true

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const User = mongoose.model("User");
+const Config = mongoose.model("Config");
 const PasswordReset = mongoose.model('PasswordReset');
 require("dotenv").config();
 
@@ -16,10 +17,6 @@ const setCookie = require('../utils/setCookie');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
-
-const VERIFY_EMAILS = Boolean(process.env.VERIFY_EMAILS);
-
-
 
 module.exports ={
 
@@ -84,48 +81,61 @@ module.exports ={
             else if(password !== cpassword){
                 return res.status(405).json({status: false, msg: "Passwords do not match!"});
                 
-            }else{
-
-                //check for already existing email and username
-                const oldUser = await User.findOne({email});
-                const oldUsername = await User.findOne({username});
-                
-                if(oldUser){
-                    return res.status(409).json({status: false, msg: "Email already exist!"});
-                }
-
-                if(oldUsername){
-                    return res.status(409).json({status: false, msg: "Username already taken!"});
-                }
-
-                //hash the password
-                const hashedPass = await bcrypt.hash(password, 10);
-                
-                //save data to database
-                const user = new User({
-                    email,
-                    username,
-                    token: VERIFY_EMAILS ? ran.token() : "",
-                    isVerified: VERIFY_EMAILS ? false : true,
-                    accountNumber: ran.acc(),
-                    referralCode: ran.referralCode(),
-                    password: hashedPass
-                })
-
-                if(refcode){
-                    const referringUser = await User.findOne({referralCode: refcode})
-                    if(referringUser){
-                        await User.findByIdAndUpdate({_id: referringUser._id}, {$push: {
-                            referree: user._id
-                        }})
-                    }
-                }
+            }
+            //check for already existing email and username
+            const oldUser = await User.findOne({email});
+            const oldUsername = await User.findOne({username});
             
-                //send account activation link to the user
-                if(VERIFY_EMAILS){
-                    verificationLink(user, res);
-                }
+            if(oldUser){
+                return res.status(409).json({status: false, msg: "Email already exist!"});
+            }
 
+            if(oldUsername){
+                return res.status(409).json({status: false, msg: "Username already taken!"});
+            }
+
+            //hash the password
+            const hashedPass = await bcrypt.hash(password, 10);
+            
+            // get currency and verifyEmail from config data if exist otherwise set to the one in env
+            // get all config
+            const config = await Config.find({});
+
+            const currency = config && config.length >= 1 ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+
+
+            const resolveEnvVerifyEmail =()=>{
+                return process.env.VERIFY_EMAIL === 'yes' ? 'yes' : 'no'
+            };
+
+            const verifyEmail = config && config.length >= 1 ? config[0].verifyEmail : resolveEnvVerifyEmail()
+            
+            //save data to database
+            const user = new User({
+                email,
+                username,
+                token: verifyEmail==='yes' ? ran.token() : "",
+                isVerified: verifyEmail==='yes' ? false : true,
+                accountNumber: ran.acc(),
+                referralCode: ran.referralCode(),
+                password: hashedPass,
+                currency,
+            })
+
+            if(refcode){
+                const referringUser = await User.findOne({referralCode: refcode})
+                if(referringUser){
+                    await User.findByIdAndUpdate({_id: referringUser._id}, {$push: {
+                        referree: user._id
+                    }})
+                }
+            }
+        
+            //send account activation link to the user
+            if(verifyEmail==='yes'){
+                verificationLink(user, res);
+            }
+            else{
                 const accesstoken = generateAccesstoken(user._id);
                 const refreshtoken = generateRefreshtoken(user._id);
 
@@ -136,7 +146,7 @@ module.exports ={
             }
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
+            return res.status(500).json({status: false, msg: 'Server error, please contact customer service'});
         }
     },
 
@@ -312,24 +322,60 @@ module.exports ={
                 return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
             }
 
-            // check passwordReset collection if user already exist, then update the token
-            const oldUser = await PasswordReset.findOne({userId: user._id})
-                
-            if(oldUser){
-                const passwordReset = await PasswordReset.findOneAndUpdate({userId: user._id}, {$set: {token: ran.resetToken()}}, {new: true});
+             // get verifyEmail from config data if exist otherwise set to the one in env
+
+            // get all config
+            const config = await Config.find({});
+
+            const resolveEnvVerifyEmail =()=>{
+                return process.env.VERIFY_EMAIL === 'yes' ? 'yes' : 'no'
+            };
+            
+            const verifyEmail = config && config.length >= 1 ? config[0].verifyEmail : resolveEnvVerifyEmail()
+
+
+            // check if verifyEmail is et to yes, send link to email, otherwise bypass email verification
+
+            if(verifyEmail === 'yes'){
+                // check passwordReset collection if user already exist, then update the token
+                const oldUser = await PasswordReset.findOne({userId: user._id})
+                    
+                if(oldUser){
+                    const passwordReset = await PasswordReset.findOneAndUpdate({userId: user._id}, {$set: {token: ran.resetToken()}}, {new: true});
+                    const data = {email: user.email, passwordReset}
+                    passResetLink(data, res);
+                }
+
+                // otherwise generate and save token and also save the user             
+                const passwordReset = new PasswordReset({
+                    token: ran.resetToken(),
+                    userId: user._id
+                })
+
+                await passwordReset.save()
                 const data = {email: user.email, passwordReset}
                 passResetLink(data, res);
             }
+            else{
 
-            // otherwise generate and save token and also save the user             
-            const passwordReset = new PasswordReset({
-                token: ran.resetToken(),
-                userId: user._id
-            })
+                // bypass email verification and sending token to PasswordReset databse, send the token to client so that it can be passed to as query string
+                const oldUser = await PasswordReset.findOne({userId: user._id})
+                    
+                if(oldUser){
+                    const passwordReset = await PasswordReset.findOneAndUpdate({userId: user._id}, {$set: {token: ran.resetToken()}}, {new: true});
+                }
 
-            await passwordReset.save()
-            const data = {email: user.email, passwordReset}
-            passResetLink(data, res);
+                // otherwise generate and save token and also save the user             
+                const passwordReset = new PasswordReset({
+                    token: ran.resetToken(),
+                    userId: user._id
+                })
+
+                await passwordReset.save()
+
+                return res.status(200).json({status: true, msg: "Reset your password", token: passwordReset.token});
+            }
+                        
         }
         catch(err){
             return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
@@ -513,9 +559,14 @@ module.exports ={
     
     removeUnverifiedUsers: async (req, res)=> {
         try{
-            const time = 60;
+            // get expiresIn from config data if exist otherwise set to 0
 
+            // get all config
+            const config = await Config.find({});
+            const time = config && config.length > 1 ? config[0].unverifyUserLifeSpan : 0
+    
             const expiresIn = parseInt(time); // time is in seconds
+            console.log(expiresIn)
   
             if(!time || time <= 0){
                 return res.status(200).json({status: true, msg: "Unverified users allowed to stay"})
@@ -556,7 +607,7 @@ module.exports ={
             
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({status: false, msg: err.message})
         }
     },
 

@@ -412,6 +412,40 @@ module.exports ={
         }
     },
 
+    updatePhone: async (req, res)=> {
+        try{
+            const loggedUserId = req.user
+            const { phone } = req.body;
+
+            // update the user with the phone number
+            const user = await User.findByIdAndUpdate({_id: loggedUserId}, {$set: {
+                phone
+            }}, {new: true})
+
+            return res.status(200).json({status: true, msg: "Profile has been updated", data: user});
+        }
+        catch(err){
+            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+        }
+    }, 
+
+    updateAvater: async (req, res)=> {
+        try{
+            const loggedUserId = req.user
+            const { avater } = req.body;
+
+            // update the user with the phone number
+            const user = await User.findByIdAndUpdate({_id: loggedUserId}, {$set: {
+                avater: avater
+            }}, {new: true})
+
+            return res.status(200).json({status: true, msg: "Profile has been updated", data: user});
+        }
+        catch(err){
+            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+        }
+    },
+
     blockUser: async (req, res)=> {
         try{
             let {id} = req.params
@@ -488,25 +522,43 @@ module.exports ={
                 return res.status(200).json({status: true, msg: "Unverified users allowed to stay"})
             }
 
-            const currentTime = new Date().getTime() / 1000 / 60 // seconds
+            const currentTime = new Date().getTime() / 1000 // seconds
 
             const users = await User.find({})
 
-            //loop through users are remove all unverified users after the time provided is elapsed
-            for(let user of users){
-                const createdTime = new Date(user.createdAt).getTime() / 1000 / 60;
+            // console.log(currentTime - createdTime)
 
-                if(!user.isVerified && currentTime - createdTime >= expiresIn){
-                    await User.deleteMany({isVerified: false})
-        
-                    return res.status(200).json({status: true, msg: "Unverified Users removed successfully"})
-                }else{
-                    return res.status(200).json({status: true, msg: "Unverified Users removed successfully"})
+            //loop through and get the ids of unverified that have over stayed beyounf welcome, none of these should be admin
+            let ids = []
+            for(let user of users){
+                const createdTime = new Date(user.createdAt).getTime() / 1000 // seconds
+
+                if(!user.isVerified && !user.isAdmin && currentTime - createdTime >= expiresIn){
+                    ids.push(user._id.toString())
                 }
             }
+
+            // delete the users
+            await User.deleteMany({isVerified: false})
+
+            // delete all their deposit hx
+            //...await User.deleteMany({userId_: ids})
+
+            // delete all their withdrawal hx
+            //...await User.deleteMany({userId_: ids})
+
+            // delete all their internal transfer hx
+            //...await User.deleteMany({userId_: ids})
+
+            // delete all their investment hx
+            //...await User.deleteMany({userId_: ids})
+
+
+            return res.status(200).json({status: true, msg: "Unverified Users removed successfully"})
+            
         }
         catch(err){
-            return res.status(500).json({status: false, msg: `Server error, please contact the customer service`})
+            return res.status(500).json({status: false, msg: err.message})
         }
     },
 

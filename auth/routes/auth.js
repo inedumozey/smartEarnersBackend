@@ -24,6 +24,10 @@ route.post("/reset-pass-request", authCrtl.resetPassRequest);
 
 route.post('/reset-pass', authCrtl.resetPass);
 
+route.put('/update-phone', userAuth, authCrtl.updatePhone);
+
+route.put('/update-avater', userAuth, authCrtl.updateAvater);
+
 
 
 route.get('/remove-unverified-users', authCrtl.removeUnverifiedUsers)

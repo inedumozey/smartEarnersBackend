@@ -1,12 +1,12 @@
 "use strict"
 
 const express = require("express")
-const path = require("path")
 const cors = require("cors")
 const morgan = require("morgan")
+const cookieParser = require('cookie-parser')
+
 const winston = require("./config/winstonConfig")
 const db = require('./config/db')
-const cookieParser = require('cookie-parser')
 
 const app = express();
 
@@ -36,27 +36,27 @@ app.use(cors(corsOptions))
 // register database model
 require('./auth/models/auth')
 require('./auth/models/passwordReset')
+require('./websiteConfig/models/config')
 
 // routes
 app.use('/auth',  require("./auth/routes/auth")); 
+app.use('/config',  require('./websiteConfig/routes/config')); 
 
 
 app.use(function(err, req, res, next){
-    res.locals.message = err.message;
-    res.locals.error = req.app.get('env') === 'development' ? err : {};
+    // res.locals.message = err.message;
+    // res.locals.error = req.app.get('env') === 'development' ? err : {};
     winston.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
-    res.status(err.status || 500)
-    
+    // res.status(err.status || 500)
 });
 
 // normalize port
 const normalizePort = (val) => {
     let port = parseInt(val, 10)
-    if(isNaN(port))
-        return val
+
+    if(isNaN(port)) return val
     
-    if(port >= 0)
-        return port
+    if(port >= 0) return port
     
     return false
 }

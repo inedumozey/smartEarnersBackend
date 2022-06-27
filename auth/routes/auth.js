@@ -28,8 +28,6 @@ route.put('/update-phone', userAuth, authCrtl.updatePhone);
 
 route.put('/update-avater', userAuth, authCrtl.updateAvater);
 
-
-
 route.get('/remove-unverified-users', authCrtl.removeUnverifiedUsers)
 
 route.get('/block-user/:id', adminAuth, authCrtl.blockUser)

@@ -1,24 +1,24 @@
 const mongoose = require('mongoose')
 const User = mongoose.model("User");
 const PasswordReset = mongoose.model('PasswordReset');
-// const ReferralReward = mongoose.model('ReferralReward');
+require("dotenv").config();
 
 const bcrypt = require("bcrypt");
 const createDOMPurify = require('dompurify');
 const {JSDOM} = require('jsdom');
 const jwt = require("jsonwebtoken");
+
 const verificationLink = require('../utils/verificationLink');
 const passResetLink = require('../utils/passResetLink');
 const ran = require('../utils/randomString')
 const { generateAccesstoken, generateRefreshtoken } = require('../utils/generateTokens')
-const setCookie = require('../utils/setCookie')
-
-require("dotenv").config();
-
-const VERIFY_EMAILS = Boolean(process.env.VERIFY_EMAILS);
+const setCookie = require('../utils/setCookie');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
+
+const VERIFY_EMAILS = Boolean(process.env.VERIFY_EMAILS);
+
 
 
 module.exports ={
@@ -92,8 +92,8 @@ module.exports ={
                 
                 if(oldUser){
                     return res.status(409).json({status: false, msg: "Email already exist!"});
-
                 }
+
                 if(oldUsername){
                     return res.status(409).json({status: false, msg: "Username already taken!"});
                 }
@@ -124,16 +124,15 @@ module.exports ={
                 //send account activation link to the user
                 if(VERIFY_EMAILS){
                     verificationLink(user, res);
-
-                }else{
-                    const accesstoken = generateAccesstoken(user._id);
-                    const refreshtoken = generateRefreshtoken(user._id);
-
-                    setCookie(accesstoken, refreshtoken, res);
-                    await user.save();
-                    
-                    return res.status(200).json({status: true, msg: "You are registerd successfully"})
                 }
+
+                const accesstoken = generateAccesstoken(user._id);
+                const refreshtoken = generateRefreshtoken(user._id);
+
+                setCookie(accesstoken, refreshtoken, res);
+                await user.save();
+                
+                return res.status(200).json({status: true, msg: "You are registerd successfully"})
             }
         }
         catch(err){
@@ -333,7 +332,7 @@ module.exports ={
             passResetLink(data, res);
         }
         catch(err){
-            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -394,7 +393,7 @@ module.exports ={
             return res.status(200).json({status: true, msg: "Password Changed and you logged in"})
         }   
         catch(err){
-            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
         }
     },
 
@@ -415,7 +414,7 @@ module.exports ={
     updatePhone: async (req, res)=> {
         try{
             const loggedUserId = req.user
-            const { phone } = req.body;
+            const phone = DOMPurify.sanitize(req.body.phone);
 
             // update the user with the phone number
             const user = await User.findByIdAndUpdate({_id: loggedUserId}, {$set: {
@@ -425,7 +424,7 @@ module.exports ={
             return res.status(200).json({status: true, msg: "Profile has been updated", data: user});
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         }
     }, 
 
@@ -524,11 +523,10 @@ module.exports ={
 
             const currentTime = new Date().getTime() / 1000 // seconds
 
+            //get all users
             const users = await User.find({})
 
-            // console.log(currentTime - createdTime)
-
-            //loop through and get the ids of unverified that have over stayed beyounf welcome, none of these should be admin
+            //loop through them and get the ids of unverified users that have stayed beyound welcome, none of these should be admin
             let ids = []
             for(let user of users){
                 const createdTime = new Date(user.createdAt).getTime() / 1000 // seconds
@@ -558,7 +556,7 @@ module.exports ={
             
         }
         catch(err){
-            return res.status(500).json({status: false, msg: err.message})
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         }
     },
 
@@ -603,7 +601,7 @@ module.exports ={
 
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         }
         
     },
@@ -640,7 +638,7 @@ module.exports ={
 
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         } 
     },
 }

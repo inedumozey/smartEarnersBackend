@@ -222,11 +222,11 @@ module.exports ={
                 }
             }
 
-            const investmentCount = config && config.length >= 1 && config[0].investmentCount? config[0].investmentCount : process.env.INVESTMENT_COUNT;
+            const investmentLimits = config && config.length >= 1 && config[0].investmentLimits? config[0].investmentLimits : process.env.INVESTMENT_LIMITS;
 
             // if count is more than, refuse him of further investment
-            if(count >= investmentCount){
-                return res.status(400).json({ status: false, msg: `You cannot have more than ${investmentCount} active investments`})
+            if(count >= investmentLimits){
+                return res.status(400).json({ status: false, msg: `You cannot have more than ${investmentLimits} active investments`})
             }
             else{
 
@@ -265,6 +265,8 @@ module.exports ={
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
+
+ 
 
 
 }

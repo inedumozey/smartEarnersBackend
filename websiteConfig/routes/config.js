@@ -8,7 +8,8 @@ route.post("/set", config.setConfig);
 route.get("/get", config.getConfig);
 route.put("/update", adminAuth, config.updateConfig);
 route.put("/update-contact", adminAuth, config.updateContact);
+route.put("/update-benefits", adminAuth, config.updateBenefits);
 route.put("/update-logo", adminAuth, config.updateLogo);
-route.put("/remove-logo", adminAuth, config.removeLogo);
+route.delete("/remove-logo", adminAuth, config.removeLogo);
 
 module.exports = route

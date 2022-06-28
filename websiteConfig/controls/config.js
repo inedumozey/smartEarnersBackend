@@ -71,7 +71,7 @@ module.exports ={
                 brandColorC:  DOMPurify.sanitize(req.body.brandColorC),
                 verifyEmail:  DOMPurify.sanitize(req.body.verifyEmail),
                 stands:  DOMPurify.sanitize(req.body.stands),
-                investmentCount:  parseInt(DOMPurify.sanitize(req.body.investmentCount)),
+                investmentLimits:  parseInt(DOMPurify.sanitize(req.body.investmentLimits)),
             }
 
             const resolveCustomerSupport =()=>{
@@ -145,6 +145,33 @@ module.exports ={
 
             const config_ = await Config.find({});
             return res.status(200).json({ status: true, msg: "contacts updated", data: config_})
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+        }
+    },
+
+    updateBenefits: async (req, res)=> {
+        try{
+            const benefits = JSON.parse(DOMPurify.sanitize(JSON.stringify(req.body.benefits)));
+            
+            // get all config
+            const config = await Config.find({});
+
+            if(config.length < 1){
+                //add contact
+                const newConfig = new Config({benefits: [...benefits]});
+                newConfig.save()
+
+                return res.status(200).json({ status: true, msg: "benefits updated", data: newConfig})
+
+            }
+
+            // loop through benefits from form, and push to benefits in config database without duplicate 
+            await Config.findByIdAndUpdate({_id: config[0].id}, {$set: {benefits: benefits}}, {new: true})
+
+            const config_ = await Config.find({});
+            return res.status(200).json({ status: true, msg: "benefits updated", data: config_})
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})

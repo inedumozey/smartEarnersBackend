@@ -22,7 +22,7 @@ const schema = new mongoose.Schema(
             type: String,
             default: 'SmartEarners is a trustworthy platform that has been in existence for years serving several financial institutions across the world. We have had major rights and praises of good reputation amongst the section of investment platforms for trading and circular form of rewards.'
         },
-        stands: [],
+        benefits: [],
         customerSupport:{
             type: String,
             default: 'yes'
@@ -60,7 +60,7 @@ const schema = new mongoose.Schema(
             default: 'no'
         },
         contacts: [],
-        investmentCount: {
+        investmentLimits: {
             type: Number,
             default: 2
         }

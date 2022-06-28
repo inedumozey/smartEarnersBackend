@@ -66,9 +66,12 @@ module.exports ={
                 conversionRate:  DOMPurify.sanitize(req.body.conversionRate),
                 nativeCurrency:  DOMPurify.sanitize(req.body.nativeCurrency),
                 tradeCurrency:  DOMPurify.sanitize(req.body.tradeCurrency),
-                majorBrandColor:  DOMPurify.sanitize(req.body.majorBrandColor),
-                minorBrandColor:  DOMPurify.sanitize(req.body.minorBrandColor),
+                brandColorA:  DOMPurify.sanitize(req.body.brandColorA),
+                brandColorB:  DOMPurify.sanitize(req.body.brandColorB),
+                brandColorC:  DOMPurify.sanitize(req.body.brandColorC),
                 verifyEmail:  DOMPurify.sanitize(req.body.verifyEmail),
+                stands:  DOMPurify.sanitize(req.body.stands),
+                investmentCount:  parseInt(DOMPurify.sanitize(req.body.investmentCount)),
             }
 
             const resolveCustomerSupport =()=>{
@@ -87,7 +90,11 @@ module.exports ={
                 conversionRate: parseInt(data.conversionRate),
                 nativeCurrency: data.nativeCurrency.toUpperCase(),
                 tradeCurrency: data.tradeCurrency.toUpperCase(),
-                majorBrandColor: data.majorBrandColor,
+                brandColorA: data.brandColorA,
+                brandColorB: data.brandColorB,
+                brandColorC: data.brandColorC,
+                stands: data.stands,
+                investmentCount: data.investmentCount,
                 verifyEmail: resolveVerifyEmail(),
             }
 

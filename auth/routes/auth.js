@@ -34,11 +34,11 @@ route.get('/block-user/:id', adminAuth, authCrtl.blockUser)
 
 route.get('/unblock-user/:id', adminAuth, authCrtl.unblockUser)
 
-//only the admin and logged in user will have access to this
+// only the admin and logged in user will have access to this
 route.get('/delete-user/:id', userAuth, authCrtl.deleteAccount)
 
 // delete all users except the admin
-//only the admin will have access to this
+// only the admin will have access to this
 route.get('/delete-all-users', adminAuth, authCrtl.deleteAllUsers)
 
 module.exports = route

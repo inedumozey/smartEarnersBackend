@@ -123,11 +123,11 @@ module.exports ={
 
             // 3 save data into internal transfer database (transaction) of the sender
 
-            // get currency and verifyEmail from config data if exist otherwise set to the one in env
+            // get currency from config data if exist otherwise set to the one in env
             // get all config
             const config = await Config.find({});
 
-            const currency = config && config.length >= 1 ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
 
             const newInternalTransfer = new InternalTransfer({
                 userId,

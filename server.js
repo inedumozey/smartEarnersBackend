@@ -38,11 +38,14 @@ require('./auth/models/auth')
 require('./auth/models/passwordReset')
 require('./websiteConfig/models/config')
 require('./internalTransfer/models/internalTransfer')
+require('./investment/models/InvestmentPlan')
+require('./investment/models/Investment')
 
 // routes
 app.use('/auth',  require("./auth/routes/auth")); 
 app.use('/config',  require('./websiteConfig/routes/config')); 
 app.use('/transfer',  require('./internalTransfer/routes/internalTransfer')); 
+app.use('/investment',  require('./investment/routes/investment')); 
 
 
 app.use(function(err, req, res, next){

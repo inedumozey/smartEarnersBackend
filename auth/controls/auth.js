@@ -101,7 +101,7 @@ module.exports ={
             // get all config
             const config = await Config.find({});
 
-            const currency = config && config.length >= 1 ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
 
 
             const resolveEnvVerifyEmail =()=>{
@@ -331,7 +331,7 @@ module.exports ={
                 return process.env.VERIFY_EMAIL === 'yes' ? 'yes' : 'no'
             };
             
-            const verifyEmail = config && config.length >= 1 ? config[0].verifyEmail : resolveEnvVerifyEmail()
+            const verifyEmail = config && config.length >= 1 && config[0].verifyEmail ? config[0].verifyEmail : resolveEnvVerifyEmail()
 
 
             // check if verifyEmail is et to yes, send link to email, otherwise bypass email verification
@@ -563,7 +563,7 @@ module.exports ={
 
             // get all config
             const config = await Config.find({});
-            const time = config && config.length > 1 ? config[0].unverifyUserLifeSpan : 0
+            const time = config && config.length >= 1 && config[0].unverifyUserLifeSpan ? config[0].unverifyUserLifeSpan : 0
     
             const expiresIn = parseInt(time); // time is in seconds
             console.log(expiresIn)

@@ -23,13 +23,17 @@ module.exports = async(user, res)=>{
     let configData;
 
     if( config && config.length >= 1){
-        configData = config[0]
+        configData = {
+            name: config[0].name,
+            bio: config[0].bio,
+            brandColorA:  config[0].brandColorA,
+        }
 
     }else{
         configData = {
             name: process.env.COMPANY_NAME,
             bio: process.env.BIO,
-            majorBrandColor: process.env.MAJOR_BRAND_COLOR,
+            brandColorA: process.env.BRAND_COLOR_A,
         }
     } 
 
@@ -40,7 +44,7 @@ module.exports = async(user, res)=>{
         const text = `
             <div style="border: 2px solid #aaa; box-sizing: border-box; margin: 0; background: #fff; height: 70vh; padding: 10px">
 
-                <div style="text-align:center; height: 70px; background: ${configData.majorBrandColor}">
+                <div style="text-align:center; height: 70px; background: ${configData.brandColorA}">
                     <h2 style="font-weight: bold; font-size: 1.5rem; color: #fff; padding:3px 3px 0 3px; margin:0">
                         ${configData.name}
                     </h2>
@@ -54,7 +58,7 @@ module.exports = async(user, res)=>{
                         Thanks <span style="font-weight: bold">${user.username}</span> for registering with ${configData.name}
                     </div>
                     <div>
-                        <a style="display:inline-block; background: ${configData.majorBrandColor}; text-align:center; padding: 15px; color: #fff; font-weight: 600" href="${URL}">Click to Verify Your Account</a>
+                        <a style="display:inline-block; background: ${configData.brandColorA}; text-align:center; padding: 15px; color: #fff; font-weight: 600" href="${URL}">Click to Verify Your Account</a>
                     </div>
                     <div style="text-align: center; margin: 5px 0; padding:10px">${URL}</div>
                 </div>

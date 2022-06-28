@@ -23,7 +23,7 @@ const conversionRate = {
                 }
             } 
 
-            return amount * configData.conversionRate
+            return amount * 1 / configData.conversionRate
         }
         catch(err){
             throw err
@@ -48,7 +48,7 @@ const conversionRate = {
                 }
             } 
 
-            return amount * 1 / configData.conversionRate
+            return amount * configData.conversionRate
         }
         catch(err){
             throw err

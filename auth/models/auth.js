@@ -25,8 +25,8 @@ const schema = new mongoose.Schema(
             type: String
         },
         amount: {
-            type: String,
-            default: '0'
+            type: Number,
+            default: 0
         },
         currency: {
             type: String,

@@ -37,10 +37,12 @@ app.use(cors(corsOptions))
 require('./auth/models/auth')
 require('./auth/models/passwordReset')
 require('./websiteConfig/models/config')
+require('./internalTransfer/models/internalTransfer')
 
 // routes
 app.use('/auth',  require("./auth/routes/auth")); 
 app.use('/config',  require('./websiteConfig/routes/config')); 
+app.use('/transfer',  require('./internalTransfer/routes/internalTransfer')); 
 
 
 app.use(function(err, req, res, next){
@@ -66,3 +68,12 @@ const PORT = normalizePort(process.env.PORT || "5000")
 const server = app.listen(PORT, ()=>{
     console.log(`Server connected in port ${PORT}`)
 })
+
+
+//conversion rate (testing)
+const conversionRate = require('./config/conversionRate');
+
+async function run(){
+    const usd = await conversionRate.SEC_TO_USD(50)
+    console.log(usd)
+}

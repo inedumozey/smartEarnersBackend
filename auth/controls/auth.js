@@ -566,7 +566,6 @@ module.exports ={
             const time = config && config.length >= 1 && config[0].unverifyUserLifeSpan ? config[0].unverifyUserLifeSpan : 0
     
             const expiresIn = parseInt(time); // time is in seconds
-            console.log(expiresIn)
   
             if(!time || time <= 0){
                 return res.status(200).json({status: true, msg: "Unverified users allowed to stay"})

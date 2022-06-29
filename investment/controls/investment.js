@@ -257,15 +257,103 @@ module.exports ={
         }
     },
 
-    rewards: async (req, res)=> {
+    track: async (req, res)=> {
         try{
+          
+            // get all investments
+            const investments = await Investment.find({}).populate({path: 'planId'});
+
+            // loop through investments
+
+            // check if there are investment
+            let maturedInvestments = []
+            let activeInvestment = []
+            if(!investments){
+                return res.status(200).json({ status: true, msg: "No any investment made"})
+            }
+            for(let investment of investments){
+                const currentTime = new Date().getTime() / 1000 // seconds
+
+                const createTime = new Date(investment.createdAt).getTime() / 1000 // seconds
+                
+                const investmentLifespan = parseInt(investment.planId.lifespan)
+
+                // check for all active investment that have matured
+                if( currentTime - createTime >= investmentLifespan && investment.isActive){
+                    maturedInvestments.push(investment)
+                }
+                else{
+                    activeInvestment.push(investment)
+                }
+            }
             
+            // fetch the users with these maturedInvestments and update their account balance
+            if(maturedInvestments.length > 0){
+                for(let maturedInvestment of maturedInvestments){
+
+                    // get the users with these investments
+                    const userId = maturedInvestment.userId.toString();
+                    const users = await User.findOne({_id: userId})
+    
+                    // get the amount
+                    const amount = parseInt(maturedInvestment.planId.amount);
+    
+                    // get the investment returnPercentage
+                    const returnPercentage = parseInt(maturedInvestment.planId.returnPercentage)
+    
+                    // calculate the reward
+                    const reward = ( returnPercentage / 100) * amount;
+
+                    // update the users account
+                    await User.updateMany({_id: userId}, {$set: {
+                        amount: users.amount + reward
+                    }}, {new: true})
+
+                    // update the investment database, 
+                    await Investment.updateMany({_id: maturedInvestment.id}, {$set: {
+                        rewards: reward,
+                        rewarded: true,
+                        isActive: false
+                    }}, {new: true})    
+                }
+
+                // get all the investments
+                const investments_ = await Investment.find({}).populate({path: 'planId'});
+                return res.status(200).json({ status: true, msg: "success", data: investments_})  
+
+            }else{
+                // get all the investments
+                const investments = await Investment.find({}).populate({path: 'planId'});
+
+                return res.status(200).json({ status: true, msg: "success", data: investments})
+            }
+
+
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
 
+    getAllInvestments: async (req, res)=> {
+        try{
+              
+                    
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+        }
+    },
+
+    getInvestment: async (req, res)=> {
+        try{
+              
+                    
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+        }
+    },
  
 
 

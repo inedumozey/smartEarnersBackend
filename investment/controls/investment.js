@@ -337,7 +337,29 @@ module.exports ={
 
     getAllInvestments: async (req, res)=> {
         try{
-              
+            
+            const userId = req.user;
+
+            // get all investment hx
+            const txns = await Investment.find({}).populate({path: 'planId'});
+
+            // get the loggeduser to check if he is the admin
+            const loggeduser = await User.findOne({_id: userId})
+            
+            if(loggeduser.isAdmin){
+                return res.status(200).send({status: true, msg: 'Successful', data: txns})
+            }
+
+            else{
+                let data = []
+                for(let txn of txns){
+                    if(txn.userId.toString() === userId.toString()){
+                        data.push(txn)
+                    }
+                }
+
+                return res.status(200).send({status: true, msg: 'Successful', data})
+            }
                     
         }
         catch(err){
@@ -347,8 +369,38 @@ module.exports ={
 
     getInvestment: async (req, res)=> {
         try{
-              
-                    
+            const {id} = req.params;
+            const userId = req.user;
+
+            // check item if exist
+            if(!mongoose.Types.ObjectId.isValid(id)){
+                return res.status(400).json({status: false, msg: "Plan not found"})
+            }
+
+            // get the txn
+            const txn = await Investment.findOne({_id: id}).populate({path: 'planId'});
+
+            if(!txn){
+                return res.status(400).json({ status: false, msg: "Investment not found found"})
+
+            }
+            else{
+                // check if the loggeduser is the admin
+                const loggeduser = await User.findOne({_id: userId})
+                console.log(txn.userId)
+                
+                if(loggeduser.isAdmin){
+                    return res.status(200).send({status: true, msg: 'Success', data: txn})
+                }
+
+                // check if the loggeduser was the one that owns the investment hx
+                else if(txn.userId.toString() === userId.toString()){
+                    return res.status(200).send({status: true, msg: 'Success', data: txn})
+                }
+                else{
+                    return res.status(400).send({status: true, msg: 'Access denied!'})
+                }
+            }       
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})

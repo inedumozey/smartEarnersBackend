@@ -11,8 +11,8 @@ route.put("/update-plan/:id", adminAuth, investment.updatePlan);
 route.delete("/delete-plan/:id", adminAuth, investment.deletePlan);
 route.delete("/delete-all-Plans", adminAuth, investment.deleteAllPlans);
 
-route.post("/get-all-investments", verifiedUserAuth, investment.getAllInvestments);
-route.post("/get-investment/:id", verifiedUserAuth, investment.getInvestment);
+route.get("/get-all-investments", verifiedUserAuth, investment.getAllInvestments);
+route.get("/get-investment/:id", verifiedUserAuth, investment.getInvestment);
 route.post("/invest/:id", verifiedUserAuth, investment.invest);
 route.get("/track", investment.track);
 

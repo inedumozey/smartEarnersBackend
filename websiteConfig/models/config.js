@@ -63,7 +63,12 @@ const schema = new mongoose.Schema(
         investmentLimits: {
             type: Number,
             default: 2
-        }
+        },
+        investmentRewardsPercentage: {
+            type: Number,
+            default: 10
+        },
+
     },
     {
         timestamps: true

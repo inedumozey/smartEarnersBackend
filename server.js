@@ -38,15 +38,16 @@ require('./auth/models/auth')
 require('./auth/models/passwordReset')
 require('./websiteConfig/models/config')
 require('./internalTransfer/models/internalTransfer')
-require('./investment/models/InvestmentPlan')
-require('./investment/models/Investment')
+require('./investment/models/investmentPlan')
+require('./investment/models/investment')
+require('./referralReward/models/referralReward')
 
 // routes
 app.use('/auth',  require("./auth/routes/auth")); 
 app.use('/config',  require('./websiteConfig/routes/config')); 
 app.use('/transfer',  require('./internalTransfer/routes/internalTransfer')); 
 app.use('/investment',  require('./investment/routes/investment')); 
-
+app.use('/referralReward',  require('./referralReward/routes/referralReward')); 
 
 app.use(function(err, req, res, next){
     // res.locals.message = err.message;
@@ -80,3 +81,4 @@ async function run(){
     const usd = await conversionRate.SEC_TO_USD(50)
     console.log(usd)
 }
+

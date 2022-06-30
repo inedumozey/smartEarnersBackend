@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 require('dotenv').config();
 const Config = mongoose.model("Config");
+const User = mongoose.model("User");
 const Email = require('@mozeyinedu/email')
 const { generateAccesstoken, generateRefreshtoken } = require('../utils/generateTokens');
 const setCookie = require('../utils/setCookie')
@@ -15,7 +16,7 @@ const email = new Email({
     password: process.env.EMAIL_PASS
 });
 
-module.exports = async(user, res)=>{
+module.exports = async(user, res, refcode)=>{
 
     // get config data if exist otherwise set the env
 
@@ -100,7 +101,24 @@ module.exports = async(user, res)=>{
                 const refreshtoken = generateRefreshtoken(user._id);
 
                 setCookie(accesstoken, refreshtoken, res);
-                await user.save();
+                const newUser = await user.save();
+
+                // referral
+                if(refcode){
+                    const referringUser = await User.findOne({referralCode: refcode})
+                    if(referringUser){
+
+                        // add user as referree to the referring user
+                        await User.findByIdAndUpdate({_id: referringUser._id}, {$push: {
+                            referree: newUser._id,
+                        }})
+
+                        // add the referring user as referrer to this current user
+                        await User.findByIdAndUpdate({_id: newUser.id}, {$set: {
+                            referrerId: referringUser.id
+                        }})
+                    }
+                }
 
                 return res.status(200).json({status: true, msg: `Check your email ${(user.email)} to verify your account`})
             }
@@ -111,7 +129,25 @@ module.exports = async(user, res)=>{
         const refreshtoken = generateRefreshtoken(user._id);
 
         setCookie(accesstoken, refreshtoken, res);
-        await user.save();
+
+        const newUser = await user.save();
+
+        // referral
+        if(refcode){
+            const referringUser = await User.findOne({referralCode: refcode})
+            if(referringUser){
+
+                // add user as referree to the referring user
+                await User.findByIdAndUpdate({_id: referringUser._id}, {$push: {
+                    referree: newUser._id,
+                }})
+
+                // add the referring user as referrer to this current user
+                await User.findByIdAndUpdate({_id: newUser.id}, {$set: {
+                    referrerId: referringUser.id
+                }})
+            }
+        }
         
         return res.status(200).json({status: true, msg: "On development mode! Please check below to verify your account", token: user.token})
     }

@@ -217,7 +217,7 @@ module.exports ={
                 }
 
                 // check for active investment plans, if same with the plan he is requesting for currently, increament samePlan
-                if(userPlan.planId.type === data_.type){
+                if(userPlan.isActive && userPlan.planId.type === data_.type){
                     ++samePlan
                 }
             }
@@ -247,7 +247,27 @@ module.exports ={
                     const newInvestment = new Investment(data);
                     await newInvestment.save();
 
-                    return res.status(200).json({ status: true, msg: `You have started investing for ${data_.type}`, data: newInvestment})
+                    // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
+                    // then change hasInvested:true
+                    // get the value(the amount of the plan he selected)
+                    // updated firstInvestmentPlanValue with the planValue
+
+                    // 1. get the plan value using the plan id
+                    const plan = await InvestmentPlan.findOne({_id: id});
+                    const planValue = parseInt(plan.amount);
+
+                    // 3. get the user from user database
+                    const user = await User.findOne({_id: userId})
+
+                    // check if firstInvestmentRewards is null and is hasInvested false, then update the user
+                    if(!user.hasInvested && !user.firstInvestmentPlanValue){
+                        await User.findByIdAndUpdate({_id: userId}, {$set: {
+                            hasInvested: true,
+                            firstInvestmentPlanValue: planValue
+                        }})
+                    }
+                   
+                    return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: newInvestment})
                 }
                 
             }
@@ -257,13 +277,11 @@ module.exports ={
         }
     },
 
-    track: async (req, res)=> {
+    resolve: async (req, res)=> {
         try{
           
             // get all investments
             const investments = await Investment.find({}).populate({path: 'planId'});
-
-            // loop through investments
 
             // check if there are investment
             let maturedInvestments = []
@@ -271,6 +289,8 @@ module.exports ={
             if(!investments){
                 return res.status(200).json({ status: true, msg: "No any investment made"})
             }
+
+            // loop through investments
             for(let investment of investments){
                 const currentTime = new Date().getTime() / 1000 // seconds
 
@@ -327,7 +347,6 @@ module.exports ={
 
                 return res.status(200).json({ status: true, msg: "success", data: investments})
             }
-
 
         }
         catch(err){
@@ -406,7 +425,5 @@ module.exports ={
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
         }
     },
- 
-
-
+    
 }

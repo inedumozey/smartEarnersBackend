@@ -22,7 +22,7 @@ module.exports ={
 
     getUsers: async (req, res)=> {
         try{
-           const users = await User.find({});
+           const users = await User.find({}).populate({path: 'referree'}).populate({path: 'referrerId'});
            return res.status(200).json({ status: true, msg: "successfull", data: users})
         }
         catch(err){
@@ -41,7 +41,7 @@ module.exports ={
         }
 
         //find paramsUser
-        const paramUser = await User.findOne({_id: id});
+        const paramUser = await User.findOne({_id: id}).populate({path: 'referree'}).populate({path: 'referrerId'});
         if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
 
         //find loggeduer
@@ -120,33 +120,47 @@ module.exports ={
                 referralCode: ran.referralCode(),
                 password: hashedPass,
                 currency,
+                hasInvested: false,
+                firstInvestmentPlanValue: null,
+                hasReturnedReferralRewards: false
             })
-
-            if(refcode){
-                const referringUser = await User.findOne({referralCode: refcode})
-                if(referringUser){
-                    await User.findByIdAndUpdate({_id: referringUser._id}, {$push: {
-                        referree: user._id
-                    }})
-                }
-            }
         
             //send account activation link to the user
             if(verifyEmail==='yes'){
-                verificationLink(user, res);
+                verificationLink(user, res, refcode);
             }
             else{
                 const accesstoken = generateAccesstoken(user._id);
                 const refreshtoken = generateRefreshtoken(user._id);
 
                 setCookie(accesstoken, refreshtoken, res);
-                await user.save();
+                const newUser = await user.save();
+
+                // referral
+                if(refcode){
+                    const referringUser = await User.findOne({referralCode: refcode})
+                    if(referringUser){
+
+                        // add user as referree to the referring user
+                        await User.findByIdAndUpdate({_id: referringUser._id}, {$push: {
+                            referree: newUser._id,
+                        }})
+
+                        // add the referring user as referrer to this current user
+                        await User.findByIdAndUpdate({_id: newUser.id}, {$set: {
+                            referrerId: referringUser.id
+                        }})
+                    }
+                }
                 
                 return res.status(200).json({status: true, msg: "You are registerd successfully"})
             }
+
+            
+
         }
         catch(err){
-            return res.status(500).json({status: false, msg: 'Server error, please contact customer service'});
+            return res.status(500).json({status: false, msg: err.message});
         }
     },
 
@@ -691,4 +705,5 @@ module.exports ={
             return res.status(500).json({status: false, msg: "Server error, please contact customer service"})
         } 
     },
+    
 }

@@ -72,6 +72,7 @@ module.exports ={
                 verifyEmail:  DOMPurify.sanitize(req.body.verifyEmail),
                 stands:  DOMPurify.sanitize(req.body.stands),
                 investmentLimits:  parseInt(DOMPurify.sanitize(req.body.investmentLimits)),
+                investmentRewardsPercentage:  parseInt(DOMPurify.sanitize(req.body.investmentRewardsPercentage)),
             }
 
             const resolveCustomerSupport =()=>{
@@ -95,6 +96,7 @@ module.exports ={
                 brandColorC: data.brandColorC,
                 stands: data.stands,
                 investmentCount: data.investmentCount,
+                investmentRewardsPercentage: data.investmentRewardsPercentage,
                 verifyEmail: resolveVerifyEmail(),
             }
 

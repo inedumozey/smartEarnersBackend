@@ -50,16 +50,30 @@ const schema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        hasInvested: {
+            type: Boolean,
+            default: false
+        },
+        firstInvestmentPlanValue: {
+            type: Number
+        },
         referralCode: {
             type: String,
             require: true,
         },
         referree: [ {
-            users: { 
-                type: objectID,
-                ref: 'User'
-            }
+            type: objectID,
+            ref: 'User'
         } ],
+        referrerId: {
+            type: objectID,
+            ref: 'User',
+            default: null
+        },
+        hasReturnedReferralRewards: {
+            type: Boolean,
+            default: false
+        }
     },
     {
         timestamps: true

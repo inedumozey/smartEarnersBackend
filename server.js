@@ -4,6 +4,7 @@ const express = require("express")
 const cors = require("cors")
 const morgan = require("morgan")
 const cookieParser = require('cookie-parser')
+require('dotenv').config()
 
 const winston = require("./config/winstonConfig")
 const db = require('./config/db')
@@ -41,6 +42,8 @@ require('./internalTransfer/models/internalTransfer')
 require('./investment/models/investmentPlan')
 require('./investment/models/investment')
 require('./referralReward/models/referralReward')
+require('./deposit/models/deposit')
+require('./withdrawal/models/withdrawal')
 
 // routes
 app.use('/auth',  require("./auth/routes/auth")); 
@@ -48,6 +51,8 @@ app.use('/config',  require('./websiteConfig/routes/config'));
 app.use('/transfer',  require('./internalTransfer/routes/internalTransfer')); 
 app.use('/investment',  require('./investment/routes/investment')); 
 app.use('/referralReward',  require('./referralReward/routes/referralReward')); 
+app.use('/deposit',  require('./deposit/routes/deposit')); 
+app.use('/withdrawal',  require('./withdrawal/routes/withdrawal')); 
 
 app.use(function(err, req, res, next){
     // res.locals.message = err.message;
@@ -81,4 +86,3 @@ async function run(){
     const usd = await conversionRate.SEC_TO_USD(50)
     console.log(usd)
 }
-

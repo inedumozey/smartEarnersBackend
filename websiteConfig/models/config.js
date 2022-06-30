@@ -28,12 +28,12 @@ const schema = new mongoose.Schema(
             default: 'yes'
         },
         unverifyUserLifeSpan:{
-            type: String,
+            type: Number,
             default: 0 // stays forever
         },
         conversionRate: {
-            type: String,
-            default: "500" // 1 USD === 500 SEC
+            type: Number,
+            default: 500 // 1 USD === 500 SEC
         },
         nativeCurrency: {
             type: String,
@@ -68,7 +68,7 @@ const schema = new mongoose.Schema(
             type: Number,
             default: 10
         },
-
+        withdrawalFactors: []
     },
     {
         timestamps: true

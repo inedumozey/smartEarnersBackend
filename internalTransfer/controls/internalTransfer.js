@@ -62,7 +62,7 @@ module.exports ={
             return res.status(200).json({ status: true, msg: "confirmed", data: info})        
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -72,12 +72,12 @@ module.exports ={
 
             // sanitize all elements from the client, incase of fodgery
             const data = {
-                amount:  parseInt(DOMPurify.sanitize(req.body.amount)),
+                amount:  Number(DOMPurify.sanitize(req.body.amount)),
                 id:  DOMPurify.sanitize(req.body.id),
             }
 
             if(!data.amount || !data.id){
-                return res.status(500).json({ status: false, msg: "Data is mising"})
+                return res.status(500).json({ status: false, msg: "All fields are required"})
             }
 
              // get sender's total amount
@@ -105,10 +105,38 @@ module.exports ={
 
             // check to be sure account number does not belongs to the sender
             if(rUser.accountNumber === user.accountNumber){
-                return res.status(500).json({ status: false, msg: "You cannot do transfer to yourself"})
+                return res.status(500).json({ status: false, msg: "You cannot transfer to yourself"})
             }
  
             //..........................................................
+
+            // check widthdrawal factors
+
+            // resolve withdrawal factors incase it's not in the database
+            const resolveWithdrawalFactors =()=>{
+                let factors=[]
+                const maxWithdrawalLimit = process.env.MAX_WITHDRAWAL_LIMIT ? Number(process.env.MAX_WITHDRAWAL_LIMIT) : 100000;
+                const minWithdrawalLimit = process.env.MIN_WITHDRAWAL_LIMIT ? Number(process.env.MIN_WITHDRAWAL_LIMIT) : 5000;
+                const withdrawalCommomDiff = process.env.WITHDRAWAL_COMMON_DIFF ? Number(process.env.WITHDRAWAL_COMMON_DIFF) : 5000;
+
+                for(let i=minWithdrawalLimit; i<=maxWithdrawalLimit; i=i+withdrawalCommomDiff){
+                    factors.push(i)
+                }
+                return factors
+            }
+
+            // get currency, maxWithdrawalLimit, minWithdrawalLimit and withdrawalCommomDifference from config data if exist otherwise set to the one in env
+            // get all config
+            const config = await Config.find({});
+
+            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+
+            const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveWithdrawalFactors();
+
+            // check for withdrawal factors
+            if(!withdrawalFactors.includes(data.amount)){
+                return res.status(400).json({ status: false, msg: "Invalid amount"});
+            }
         
             // handle transactions
             // 1. add the amount to the receiver's account
@@ -121,13 +149,7 @@ module.exports ={
                 amount: user.amount - data.amount
             }}, {new: true})
 
-            // 3 save data into internal transfer database (transaction) of the sender
-
-            // get currency from config data if exist otherwise set to the one in env
-            // get all config
-            const config = await Config.find({});
-
-            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+            // 3 save data into internal transfer database (transaction) of the sender            
 
             const newInternalTransfer = new InternalTransfer({
                 userId,
@@ -143,7 +165,7 @@ module.exports ={
             return res.status(200).json({ status: true, msg: `Transaction successful`, data: newInternalTransfer}) 
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -173,7 +195,7 @@ module.exports ={
             }
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -217,7 +239,7 @@ module.exports ={
 
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     }
 }

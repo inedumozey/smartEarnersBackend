@@ -9,7 +9,6 @@ const {JSDOM} = require('jsdom');
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
-
 module.exports ={
     
     resolve: async (req, res)=> {
@@ -53,6 +52,11 @@ module.exports ={
                 walletAddress: DOMPurify.sanitize(req.body.walletAddress)
             };
 
+            // validate requested amount
+            if(!data.amountRequested || !data.walletAddress){
+                return res.status(400).json({ status: false, msg: "All fields are required"});
+            }
+
             // get all Withdrawal hx, and check if there is a pending transaction
             let hasPendingTxn = false
             const withdrawals = await Withdrawal.find({})
@@ -89,23 +93,18 @@ module.exports ={
             // amount requested for should not be more than their account total balance
             const user = await User.findOne({_id: userId});
 
-            // validate requested amount
-            if(!data.amountRequested || !data.walletAddress){
-                return res.status(400).json({ status: false, msg: "All fields are required"});
-            }
-
-            else if(hasPendingTxn){
-                return res.status(400).json({ status: false, msg: "You have a pending transaction"});
+            if(!withdrawalFactors.includes(data.amountRequested)){
+                return res.status(400).json({ status: false, msg: "Invalid amount"});
             }
 
             else if(data.amountRequested > user.amount){
                 return res.status(400).json({ status: false, msg: "Insulficient balance"});
             }
 
-            else if(!withdrawalFactors.includes(data.amountRequested)){
-                return res.status(400).json({ status: false, msg: "Invalid amount"});
+            else if(hasPendingTxn){
+                return res.status(400).json({ status: false, msg: "You have a pending transaction"});
             }
-    
+
             else{
                 // save this data in Withdrawal database
                 const newData_ = new Withdrawal({

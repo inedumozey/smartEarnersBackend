@@ -146,7 +146,9 @@ module.exports ={
                 conversionRate: data.conversionRate,
                 investmentLimits: data.investmentLimits,
                 investmentRewardsPercentage: data.investmentRewardsPercentage,
-        
+                minWithdrawalLimit: data.minWithdrawalLimit,
+                maxWithdrawalLimit: data.maxWithdrawalLimit,
+                withdrawalCommomDiff: data.withdrawalCommomDiff,
                 withdrawalFactors: resolveWithdrawalFactors()
             }
 

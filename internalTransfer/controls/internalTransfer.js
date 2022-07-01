@@ -25,6 +25,35 @@ module.exports ={
             if(!data.amount || !data.accountNumber){
                 return res.status(500).json({ status: false, msg: "All fields are required"})
             }
+
+
+             // resolve withdrawal factors incase it's not in the database
+             const resolveWithdrawalFactors =()=>{
+                let factors=[]
+                const maxWithdrawalLimit = process.env.MAX_WITHDRAWAL_LIMIT ? Number(process.env.MAX_WITHDRAWAL_LIMIT) : 100000;
+                const minWithdrawalLimit = process.env.MIN_WITHDRAWAL_LIMIT ? Number(process.env.MIN_WITHDRAWAL_LIMIT) : 5000;
+                const withdrawalCommomDiff = process.env.WITHDRAWAL_COMMON_DIFF ? Number(process.env.WITHDRAWAL_COMMON_DIFF) : 5000;
+
+                for(let i=minWithdrawalLimit; i<=maxWithdrawalLimit; i=i+withdrawalCommomDiff){
+                    factors.push(i)
+                }
+                return factors
+            }
+
+            // get currency, maxWithdrawalLimit, minWithdrawalLimit and withdrawalCommomDifference from config data if exist otherwise set to the one in env
+
+            // get all config
+            const config = await Config.find({});
+
+            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : (process.env.NATIVE_CURRENCY).toUpperCase();
+
+            const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveWithdrawalFactors();
+
+            if(!withdrawalFactors.includes(data.amount)){
+                return res.status(400).json({ status: false, msg: "Invalid amount"});
+            }
+
+
             // get sender's total amount
             const user = await User.findOne({_id: userId})
             if(!user){
@@ -50,12 +79,11 @@ module.exports ={
             }
 
             const info = {
-                id: rUser._id,
                 username: rUser.username,
                 email: rUser.email,
                 accountNumber: rUser.accountNumber,
                 amount: data.amount,
-                currency: rUser.currency
+                currency: currency
             }
 
             // send confirmation msg to the sender
@@ -72,43 +100,13 @@ module.exports ={
 
             // sanitize all elements from the client, incase of fodgery
             const data = {
-                amount:  Number(DOMPurify.sanitize(req.body.amount)),
-                id:  DOMPurify.sanitize(req.body.id),
+                amount: Number(DOMPurify.sanitize(req.body.amount)),
+                accountNumber: DOMPurify.sanitize(req.body.accountNumber),
             }
 
-            if(!data.amount || !data.id){
+            if(!data.amount || !data.accountNumber){
                 return res.status(500).json({ status: false, msg: "All fields are required"})
             }
-
-             // get sender's total amount
-            const user = await User.findOne({_id: userId})
-            if(!user){
-                return res.status(500).json({ status: false, msg: "User not found!"})
-            }
-
-            // check sender's amount, if less than what he is transfering, send error
-            if(parseInt(data.amount) > parseInt(user.amount)){
-                return res.status(500).json({ status: false, msg: "Insufficient balance"})
-            }
-
-            // get the receiver using the account number
-            if(!mongoose.Types.ObjectId.isValid(data.id)){
-                return res.status(400).json({status: false, msg: "Receiver not found"})
-            }
-
-            const rUser = await User.findOne({_id: data.id});
-
-            // validate the account number
-            if(!rUser){
-                return res.status(500).json({ status: false, msg: "Receiver not found"})
-            };
-
-            // check to be sure account number does not belongs to the sender
-            if(rUser.accountNumber === user.accountNumber){
-                return res.status(500).json({ status: false, msg: "You cannot transfer to yourself"})
-            }
- 
-            //..........................................................
 
             // check widthdrawal factors
 
@@ -137,6 +135,32 @@ module.exports ={
             if(!withdrawalFactors.includes(data.amount)){
                 return res.status(400).json({ status: false, msg: "Invalid amount"});
             }
+
+             // get sender's total amount
+            const user = await User.findOne({_id: userId})
+            if(!user){
+                return res.status(500).json({ status: false, msg: "User not found!"})
+            }
+
+            // check sender's amount, if less than what he is transfering, send error
+            if(parseInt(data.amount) > parseInt(user.amount)){
+                return res.status(500).json({ status: false, msg: "Insufficient balance"})
+            }
+
+            const rUser = await User.findOne({accountNumber: data.accountNumber});
+
+            // validate the account number
+            if(!rUser){
+                return res.status(500).json({ status: false, msg: "Invalid account number"})
+            };
+
+            // check to be sure account number does not belongs to the sender
+            if(rUser.accountNumber === user.accountNumber){
+                return res.status(500).json({ status: false, msg: "You cannot transfer to yourself"})
+            }
+ 
+            //.........................................................
+
         
             // handle transactions
             // 1. add the amount to the receiver's account
@@ -152,12 +176,11 @@ module.exports ={
             // 3 save data into internal transfer database (transaction) of the sender            
 
             const newInternalTransfer = new InternalTransfer({
-                userId,
                 senderId: userId,
+                receiverId: rUser.id,
+                accountNumber: data.accountNumber,
                 amount: data.amount,
                 currency,
-                receiverId: rUser.id,
-                accountNumber: data.accountNumber
             })
 
             await newInternalTransfer.save()
@@ -179,14 +202,17 @@ module.exports ={
             // get the loggeduser to check if he is the admin
             const loggeduser = await User.findOne({_id: userId})
             
+            // if admin, send all the txns
             if(loggeduser.isAdmin){
                 return res.status(200).send({status: true, msg: 'Successful', data: txns})
             }
 
             else{
+
+                // check if non admin loggedUser is the sender or receiver, then send only his tnxs
                 let data = []
                 for(let txn of txns){
-                    if(txn.userId.toString() === userId.toString()){
+                    if(txn.senderId.toString() === userId.toString() || txn.receiverId.toString() === userId.toString()){
                         data.push(txn)
                     }
                 }
@@ -218,18 +244,14 @@ module.exports ={
             // check if the loggeduser is the admin
             const loggeduser = await User.findOne({_id: userId})
             
+            // send the txn he requested
             if(loggeduser.isAdmin){
-                return res.status(200).send({status: true, msg: 'Successful',  type: 'transfer', data: txn})
+                return res.status(200).send({status: true, msg: 'Successful', data: txn})
             }
 
-            // check if the loggeduser was the one that did the transfer
-            else if(txn.senderId.toString() === userId.toString()){
-                return res.status(200).send({status: true, msg: 'Successful', type: 'send', data: txn})
-            }
-
-            // check if the loggeduser was the one that received the transfer
-            else if(txn.receiverId.toString() === userId.toString()){
-                return res.status(200).send({status: true, msg: 'Successful', type: 'receive', data: txn})
+            // check if non admin loggeduser was the one that did the transfer he requets for
+            else if(txn.senderId.toString() === userId.toString() || txn.receiverId.toString() === userId.toString()){
+                return res.status(200).send({status: true, msg: 'Successful', data: txn})
             }
 
             // if none of the above, send error

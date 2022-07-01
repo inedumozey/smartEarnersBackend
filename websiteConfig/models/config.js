@@ -68,6 +68,18 @@ const schema = new mongoose.Schema(
             type: Number,
             default: 10
         },
+        minWithdrawalLimit: {
+            type: Number,
+            default: 5000
+        },
+        maxWithdrawalLimit: {
+            type: Number,
+            default: 100000
+        },
+        withdrawalCommomDiff: {
+            type: Number,
+            default: 5000
+        },
         withdrawalFactors: []
     },
     {

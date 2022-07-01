@@ -3,13 +3,16 @@ const {ObjectId} = mongoose.Schema.Types
 
 const schema = new mongoose.Schema(
     {
-        userId: {
-            type: ObjectId,
-            ref: 'User'
-        },
         senderId: {
             type: ObjectId,
             ref: 'User'
+        },
+        receiverId: {
+            type: ObjectId,
+            ref: 'User'
+        },
+        accountNumber: {
+            type: String
         },
         amount: {
             type: Number,
@@ -18,15 +21,7 @@ const schema = new mongoose.Schema(
         currency: {
             type: String,
             default: 'SEC'
-        },
-        receiverId: {
-            type: ObjectId,
-            ref: 'User'
-        },
-        accountNumber: {
-            type: String
         }
-
     },
     {
         timestamps: true

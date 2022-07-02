@@ -1,24 +1,231 @@
 const mongoose = require('mongoose')
+const axios = require('axios')
 const Deposit = mongoose.model("Deposit");
 const User = mongoose.model("User");
 const Config = mongoose.model("Config");
 require("dotenv").config();
 const createDOMPurify = require('dompurify');
 const {JSDOM} = require('jsdom');
+const conversionRate = require('../../config/conversionRate');
+const { Client, resources, Webhook } = require('coinbase-commerce-node');
+
+const PRODUCTION = Boolean(process.env.PRODUCTION);
+
+const API_KEY = process.env.COINBASE_COMMERCE_API_KEY;
+const WEBHOOK_SECRET = process.env.COINBASE_COMMERCE_WEBHOCK_SECRET
+
+Client.init(API_KEY);
+const {Charge} = resources;
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
+const DOMAIN = process.env.BACKEND_BASE_URL
 
 module.exports ={
     
-    pend: async (req, res)=> {
+    deposit: async (req, res)=> {
         try{
             
+            const userId = req.user
+            const user = await User.findOne({_id: userId})
+
+            // sanitize all elements from the client, incase of fodgery
+            // amount is in dollars
+            const data = {
+                amount: Number(DOMPurify.sanitize(req.body.amount)),
+            }
+
+            // get all config
+            const config = await Config.find({});
+
+            const tradeCurrency = config && config.length >= 1 && config[0].tradeCurrency ? (config[0].tradeCurrency).toUpperCase() : (process.env.TRADE_CURRENCY).toUpperCase();
+
+            const nativeCurrency = config && config.length >= 1 && config[0].nativeCurrency ? (config[0].nativeCurrency).toUpperCase() : (process.env.NATIVE_CURRENCY).toUpperCase();
+
+            const name = config && config.length >= 1 && config[0].name ? config[0].name : process.env.COMPANY_NAME
+
+            const bio = config && config.length >= 1 && config[0].bio ? config[0].bio : process.env.BIO
+
+            const minDepositLimit = PRODUCTION ? (config && config.length >= 1 && config[0].minDepositLimit ? config[0].minDepositLimit : process.env.MIN_DEPOSIT_LIMIT) : 5
+
+            const amount_usd = await conversionRate.SEC_TO_USD(minDepositLimit)
+
+            if(!data.amount){
+                return res.status(400).json({ status: false, msg: "All fields are required"})
+            }
+
+            // amount must not be less than the minDepositLimit
+            if(data.amount < amount_usd){
+                return res.status(400).json({ status: true, msg: `Minimum deposit is ${amount_usd}${tradeCurrency} (${minDepositLimit}${nativeCurrency})`})
+            }
+
+            // convert this amount from SEC to USD
+        
+            const chargeData = {
+                name: name,
+                description: bio,
+                local_price: {
+                    amount: data.amount,
+                    currency: 'USD'
+                },
+                pricing_type: "fixed_price",
+                metadata: {
+                    customer_id: userId,
+                    customer_name: user.username
+                },
+
+                redirect_url: `${DOMAIN}/chargeCompleted`,
+                cancel_url: `${DOMAIN}/chargeCanceled`
+            }
+
+            const charge = await Charge.create(chargeData)
+           
+            // save info to the databse
+            const newDepositData = new Deposit({
+                userId: charge.metadata.customer_id,
+                code: charge.code,
+                amountExpected: charge.pricing.local.amount,
+                amountReceived: 0,
+                overPaymentThreshold: charge.payment_threshold.overpayment_relative_threshold,
+                underPaymentThreshold: charge.payment_threshold.underpayment_relative_threshold,
+                currency: charge.pricing.local.currency,
+                status: "charge-created",
+                amountResolved: null,
+                link: charge.hosted_url
+            })
+
+            await newDepositData.save()
+
+            const data_ = {
+                hostedUrl: newDepositData.link,
+                redirecturl: chargeData.redirect_url,
+                cancelUrl: chargeData.cancel_url,
+            }
+
+            // send the redirect to the client
+            return res.status(200).json({ status: true, msg: 'charge created', data: data_})
 
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            if(err.response){
+                return res.status(500).json({ status: false, msg: err.response.data})
+                 
+            }else{
+                if(err.message.includes('ENOTFOUND') || err.message.includes('ETIMEDOUT') || err.message.includes('ESOCKETTIMEDOUT')){
+                    return res.status(500).json({ status: false, msg: 'Poor network connection'})
+                }
+                else{
+                    return res.status(500).json({ status: false, msg: err.message})
+                }
+            }
         }
-    }
+    },
+
+    depositWebhook: async (req, res)=> {
+        try{
+            
+            // get the deposit database
+            const depositHxs = await Deposit.find({})
+            const rawBody = req.rawBody;
+            const signature = req.headers['x-cc-webhook-signature'];
+            const webhookSecret = WEBHOOK_SECRET
+            const event = Webhook.verifyEventBody(rawBody, signature, webhookSecret);
+            
+            // loop through the depositHxs
+            for(let depositHx of depositHxs){
+
+                // charge canceled
+                if(event.type === 'charge:failed' && !event.data.payments[0] && depositHx.status === 'charge-created'){
+                    await Deposit.findOneAndUpdate({code: event.data.code}, {$set: {
+                        comment: 'canceled',
+                        status: 'charge-failed',
+                    }})
+                }
+
+                // charge pending
+                if(event.type === 'charge:pending' && depositHx.status === 'charge-created'){
+                    await Deposit.findOneAndUpdate({code: event.data.code}, {$set: {
+                        comment: 'pending',
+                        status: 'charge-pending',
+                    }})
+                }
+
+                // charge conmfirmed
+                if(event.type === 'charge:confirmed' && depositHx.status === 'charge-pending'){
+                    const amountExpected = Number(depositHx.amountExpected)
+                    const amountReceived_ = event.data.payments[0].value.crypto.amount;
+                    const cryptocurrency = event.data.payments[0].value.crypto.currency;
+
+                    // convert amount received from whatever the currency paid with to USD
+                    const res = await axios.get(`https://api.coinbase.com/v2/exchange-rates?currency=${cryptocurrency}`);
+                    const amountReceived = Number(res.data.data.rates.USD) * Number(amountReceived_);
+
+                    await Deposit.findOneAndUpdate({code: event.data.code}, {$set: {
+                        comment: 'successfull',
+                        amountReceived,
+                        status: 'charge-confirmed',
+                    }})
+                }
+
+                // charge incorrect payment (overpayment/underpayment)
+                if(event.type === 'charge:failed' && event.data.payments[0] && depositHx.status === 'charge-pending'){
+                    const amountExpected = Number(depositHx.amountExpected)
+                    const amountReceived_ = event.data.payments[0].value.crypto.amount;
+                    const cryptocurrency = event.data.payments[0].value.crypto.currency;
+                    const overpayment_threshold = event.data.payment_threshold.overpayment_relative_threshold;
+                    const underpayment_threshold = event.data.payment_threshold.underpayment_relative_threshold;
+
+                    // convert amount received from whatever the currency paid with to USD
+                    const res = await axios.get(`https://api.coinbase.com/v2/exchange-rates?currency=${cryptocurrency}`);
+                    const amountReceived = Number(res.data.data.rates.USD) * Number(amountReceived_);
+
+                    const resolveComent =()=>{
+                        
+                        if((amountReceived > amountExpected) && ( amountReceived - amountExpected > overpayment_threshold)){
+                            return {
+                                comment: 'overpayment',
+                            }
+                        }
+                        else if((amountReceived < amountExpected) && (amountExpected - amountReceived < underpayment_threshold)){
+                            return {
+                                comment: 'underpayment',
+                            }
+                        }
+                    }
+
+                    const resolveOverPayment =()=>{
+                        if(amountReceived > amountExpected && amountReceived - amountExpected > overpayment_threshold){
+                            const amountDiff = amountReceived - amountExpected
+                            return amountDiff
+                        }
+                        else{
+                            return null
+                        }
+                    }
+
+                    const resolveUnderPayment =()=>{
+                        if(amountReceived < amountExpected && amountExpected - amountReceived < underpayment_threshold){
+                            const amountDiff = amountExpected - amountReceived
+                            return amountDiff
+                        }
+                        else{
+                            return null
+                        }
+                    }
+
+                    await Deposit.findOneAndUpdate({code: event.data.code}, {$set: {
+                        comment: resolveComent().comment,
+                        amountReceived,
+                        status: 'charge-confirmed',
+                        overPaidBy: resolveOverPayment(),
+                        underPaidBy: resolveUnderPayment()
+                    }}, {new: true})
+                }
+            }
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
+        }
+    },
 }

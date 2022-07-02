@@ -80,7 +80,12 @@ const schema = new mongoose.Schema(
             type: Number,
             default: 5000
         },
-        withdrawalFactors: []
+        withdrawalFactors: [],
+        withdrawableCoins: [],
+        minDepositLimit: {
+            type: Number,
+            default: 5000
+        }
     },
     {
         timestamps: true

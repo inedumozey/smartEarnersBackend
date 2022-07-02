@@ -577,6 +577,7 @@ module.exports ={
 
             // get all config
             const config = await Config.find({});
+            UNVERIFIED_USER_EXPIRED_IN
             const time = config && config.length >= 1 && config[0].unverifyUserLifeSpan ? config[0].unverifyUserLifeSpan : 0
     
             const expiresIn = parseInt(time); // time is in seconds

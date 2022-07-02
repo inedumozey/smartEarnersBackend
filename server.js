@@ -51,7 +51,7 @@ app.use('/config',  require('./websiteConfig/routes/config'));
 app.use('/transfer',  require('./internalTransfer/routes/internalTransfer')); 
 app.use('/investment',  require('./investment/routes/investment')); 
 app.use('/referralReward',  require('./referralReward/routes/referralReward')); 
-app.use('/deposit',  require('./deposit/routes/deposit')); 
+app.use(require('./deposit/routes/deposit')); 
 app.use('/withdrawal',  require('./withdrawal/routes/withdrawal')); 
 
 app.use(function(err, req, res, next){
@@ -60,6 +60,7 @@ app.use(function(err, req, res, next){
     winston.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
     // res.status(err.status || 500)
 });
+
 
 // normalize port
 const normalizePort = (val) => {
@@ -86,3 +87,18 @@ async function run(){
     const usd = await conversionRate.SEC_TO_USD(50)
     console.log(usd)
 }
+
+const axios = require('axios')
+async function run(){
+    try{
+        const res = await axios.get(`https://api.coinbase.com/v2/exchange-rates?currency=ltc`);
+        const usd = res.data.data.rates.USD * 0.0001
+        
+
+    }
+    catch(err){
+        console.log(err.message)
+    }
+}
+
+// run()

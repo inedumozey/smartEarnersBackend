@@ -18,11 +18,15 @@ module.exports ={
             // check if document is empty,
             if(config.length < 1){
 
-                const benefits_ = 'benefit1,benefit2,benefit3,';
+                // create the default
+                // create the default
+                const benefits_ = 'benefit1,benefit2,benefit3,'
                 const contacts_ = 'contact1,contact2,contact3,';
+                const withdrawalCoins_ = 'LITECOIN,DOGECOIN,TRON,USDT(bep20),BUSD(bep20),';
 
                 const benefits = process.env.BENEFITS ? process.env.BENEFITS : benefits_;
                 const contacts = process.env.CONTACTS ? process.env.CONTACTS : contacts_;
+                const withdrawalCoins = process.env.WITHDRAWAL_COINS ? process.env.WITHDRAWAL_COINS : withdrawalCoins_;
 
                 // convert benefits and contacts into array
                 const resolveArr =(string)=>{
@@ -49,6 +53,7 @@ module.exports ={
                 newConfig.withdrawalFactors = resolveWithdrawalFactors()
                 newConfig.benefits = resolveArr(benefits)
                 newConfig.contacts = resolveArr(contacts)
+                newConfig.withdrawalCoins = resolveArr(withdrawalCoins)
 
                 const configs = await newConfig.save()
                 return res.status(200).json({ status: true, msg: "success", data: configs})
@@ -70,6 +75,7 @@ module.exports ={
             const bio = 'We Trade it, You Learn & Earn it';
             const benefits = 'benefit1,benefit2,benefit3,'
             const contacts = 'contact1,contact2,contact3,';
+            const withdrawalCoins = 'LITECOIN,DOGECOIN,TRON,USDT(bep20),BUSD(bep20),';
             const customerSupport = 'yes';
             const nativeCurrency = 'SEC'
             const tradeCurrency = 'USD';
@@ -84,6 +90,7 @@ module.exports ={
             const investmentRewardsPercentage = 10;
             const maxWithdrawalLimit = 100000;
             const minWithdrawalLimit = 5000
+            const minDepositLimit = 5000
             const withdrawalCommomDiff = 5000
             
             const data = {
@@ -91,6 +98,7 @@ module.exports ={
                 bio: req.body.bio ? DOMPurify.sanitize(req.body.bio) : process.env.BIO ? process.env.BIO : bio,
                 benefits: req.body.benefits ? DOMPurify.sanitize(req.body.benefits) : process.env.BENEFITS ? process.env.BENEFITS : benefits,
                 contacts: req.body.contacts ? DOMPurify.sanitize(req.body.contacts) : process.env.CONTACTS ? process.env.CONTACTS : contacts,
+                withdrawalCoins: req.body.withdrawalCoins ? DOMPurify.sanitize(req.body.withdrawalCoins) : process.env.WITHDRAWAL_COINS ? process.env.WITHDRAWAL_COINS : withdrawalCoins,
                 customerSupport: req.body.customerSupport ? DOMPurify.sanitize(req.body.customerSupport) : process.env.CUSTOMER_SUPPORT ? process.env.CUSTOMER_SUPPORT : customerSupport,
                 nativeCurrency: req.body.nativeCurrency ? (DOMPurify.sanitize(req.body.nativeCurrency)).toUpperCase() : process.env.NATIVE_CURRENCY ? (process.env.NATIVE_CURRENCY).toUpperCase() : (nativeCurrency).toUpperCase(),
                 tradeCurrency: req.body.tradeCurrency ? (DOMPurify.sanitize(req.body.tradeCurrency)).toUpperCase() : process.env.TRADE_CURRENCY ?  (process.env.TRADE_CURRENCY).toUpperCase() : (tradeCurrency).toUpperCase(),
@@ -107,6 +115,7 @@ module.exports ={
 
                 maxWithdrawalLimit: req.body.maxWithdrawalLimit ? Number(DOMPurify.sanitize(req.body.maxWithdrawalLimit)) : process.env.MAX_WITHDRAWAL_LIMIT ? Number(process.env.MAX_WITHDRAWAL_LIMIT) : Number(maxWithdrawalLimit),
                 minWithdrawalLimit: req.body.minWithdrawalLimit ? Number(DOMPurify.sanitize(req.body.minWithdrawalLimit)) : process.env.MIN_WITHDRAWAL_LIMIT ? Number(process.env.MIN_WITHDRAWAL_LIMIT) : Number(minWithdrawalLimit),
+                minDepositLimit: req.body.minDepositLimit ? Number(DOMPurify.sanitize(req.body.minDepositLimit)) : process.env.MIN_DEPOSIT_LIMIT ? Number(process.env.MIN_DEPOSIT_LIMIT) : Number(minDepositLimit),
                 withdrawalCommomDiff: req.body.withdrawalCommomDiff ? Number(DOMPurify.sanitize(req.body.withdrawalCommomDiff)) : process.env.WITHDRAWAL_COMMON_DIFF ? Number(process.env.WITHDRAWAL_COMMON_DIFF) : Number(withdrawalCommomDiff),
             }
 
@@ -133,6 +142,7 @@ module.exports ={
                 bio: data.bio,
                 benefits: resolveArr(data.benefits),
                 contacts: resolveArr(data.contacts),
+                withdrawalCoins: resolveArr(data.withdrawalCoins),
                 customerSupport: data.customerSupport,
                 nativeCurrency: data.nativeCurrency,
                 tradeCurrency: data.tradeCurrency,
@@ -146,6 +156,7 @@ module.exports ={
                 conversionRate: data.conversionRate,
                 investmentLimits: data.investmentLimits,
                 investmentRewardsPercentage: data.investmentRewardsPercentage,
+                minDepositLimit: data.minDepositLimit,
                 minWithdrawalLimit: data.minWithdrawalLimit,
                 maxWithdrawalLimit: data.maxWithdrawalLimit,
                 withdrawalCommomDiff: data.withdrawalCommomDiff,
@@ -159,11 +170,13 @@ module.exports ={
             if(config.length < 1){
 
                 // create the default
-                const benefits_ = 'benefit1,benefit2,benefit3,';
+                const benefits_ = 'benefit1,benefit2,benefit3,'
                 const contacts_ = 'contact1,contact2,contact3,';
+                const withdrawalCoins_ = 'LITECOIN,DOGECOIN,TRON,USDT(bep20),BUSD(bep20),';
 
                 const benefits = process.env.BENEFITS ? process.env.BENEFITS : benefits_;
                 const contacts = process.env.CONTACTS ? process.env.CONTACTS : contacts_;
+                const withdrawalCoins = process.env.WITHDRAWAL_COINS ? process.env.WITHDRAWAL_COINS : withdrawalCoins_;
 
                 // convert benefits and contacts into array
                 const resolveArr =(string)=>{
@@ -190,6 +203,7 @@ module.exports ={
                 newConfig.withdrawalFactors = resolveWithdrawalFactors()
                 newConfig.benefits = resolveArr(benefits)
                 newConfig.contacts = resolveArr(contacts)
+                newConfig.withdrawalCoins = resolveArr(withdrawalCoins)
 
                 const configs = await newConfig.save()
                 return res.status(200).json({ status: true, msg: "success", data: configs})

@@ -12,13 +12,16 @@ const schema = new mongoose.Schema(
             required: true,
             trim: true
         },
-        amountRequested: {
+        amount: {
             type: Number,
             trim: true
         },
-        amountPaid: {
-            type: Number,
-            trim: true
+        currency: {
+            type: String,
+            default: 'SEC'
+        },
+        coin: {
+            type: String
         },
         status: {
             type: String,

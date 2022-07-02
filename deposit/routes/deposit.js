@@ -4,7 +4,8 @@ const { adminAuth, verifiedUserAuth } = require("../../auth/middlewares/auth")
 
 const route = express.Router()
 
-route.post("/pay-user", verifiedUserAuth, deposit.pend);
+route.post("/deposit", verifiedUserAuth, deposit.deposit);
+route.post("/payment-handler", deposit.depositWebhook);
 
 
 module.exports = route

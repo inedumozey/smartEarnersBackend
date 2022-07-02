@@ -10,63 +10,15 @@ const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
 module.exports ={
-    
-    resolve: async (req, res)=> {
-        try{
-            
-            // get all withdrawal hx from the database
-            const withdrawalHx = await Withdrawal.find({})
-
-            // loop through and get the ones with status: confirmed
-            for(let withdrawal of withdrawalHx){
-                if(withdrawal.status === 'confirmed' && !withdrawal.resolved){
-                    
-                    // get the userId that made the transactions and update their account balance
-                    const users = await User.findOne({_id: withdrawal.userId})
-
-                    // console.log(users.amount)
-                    await User.findByIdAndUpdate({_id: withdrawal.userId}, {$set: {
-                        amount: users.amount - withdrawal.amountPaid
-                    }})
-
-                    // change resolved: true
-                    await Withdrawal.updateMany({_id: withdrawal._id}, {$set: {
-                        resolved: true
-                    }})
-                }
-            }
-
-            return res.status(200).json({status: true, msg: "success"})
-
-        }
-        catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
-        }
-    },
 
     request: async (req, res)=> {
         try{
             const userId = req.user;
             const data = {
-                amountRequested:  Number(DOMPurify.sanitize(req.body.amountRequested)),
+                amount:  Number(DOMPurify.sanitize(req.body.amount)),
+                coin:  DOMPurify.sanitize(req.body.coin),
                 walletAddress: DOMPurify.sanitize(req.body.walletAddress)
             };
-
-            // validate requested amount
-            if(!data.amountRequested || !data.walletAddress){
-                return res.status(400).json({ status: false, msg: "All fields are required"});
-            }
-
-            // get all Withdrawal hx, and check if there is a pending transaction
-            let hasPendingTxn = false
-            const withdrawals = await Withdrawal.find({})
-            for(let withdrawal of withdrawals){
-                if(withdrawal.userId.toString() === userId.toString()){
-                    if(withdrawal.status === 'pending'){
-                        hasPendingTxn = true
-                    }
-                }
-            }
 
             // resolve withdrawal factors incase it's not in the database
             const resolveWithdrawalFactors =()=>{
@@ -81,23 +33,56 @@ module.exports ={
                 return factors
             }
 
-            // get currency, maxWithdrawalLimit, minWithdrawalLimit and withdrawalCommomDifference from config data if exist otherwise set to the one in env
+            const resolveArr =(string)=>{
+                const data = string.split(',')
+                const dataArr = data.slice(0, data.length-1)
+                return dataArr
+            }
+
+            // get currency, withdrawalCoins, maxWithdrawalLimit, minWithdrawalLimit and withdrawalCommomDifference from config data if exist otherwise set to the one in env
 
             // get all config
             const config = await Config.find({});
 
             const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : (process.env.NATIVE_CURRENCY).toUpperCase();
+            
+            const withdrawalCoins = config && config.length >= 1 && config[0].withdrawalCoins ? config[0].withdrawalCoins : resolveWithdrawalFactors()
 
-            const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveWithdrawalFactors();
+            const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveArr(process.env.WITHDRAWAL_COINS);
+
+            // validate
+            if(!data.coin){
+                return res.status(400).json({ status: false, msg: "No coin is selected"});
+            }
+
+            // check if coin selected is valid
+            if(!withdrawalCoins.includes(data.coin)){
+                return res.status(400).json({ status: false, msg: "Unsupported coin"});
+            }
+
+            if(!data.amount || !data.walletAddress){
+                return res.status(400).json({ status: false, msg: "All fields are required"});
+            }
+
+            // get all Withdrawal hx, and check if the user has a pending transaction
+            let hasPendingTxn = false
+            const withdrawals = await Withdrawal.find({})
+            for(let withdrawal of withdrawals){
+                if(withdrawal.userId.toString() === userId.toString()){
+                    if(withdrawal.status === 'pending'){
+                        hasPendingTxn = true
+                    }
+                }
+            }
 
             // amount requested for should not be more than their account total balance
             const user = await User.findOne({_id: userId});
 
-            if(!withdrawalFactors.includes(data.amountRequested)){
+            if(!withdrawalFactors.includes(data.amount)){
                 return res.status(400).json({ status: false, msg: "Invalid amount"});
             }
 
-            else if(data.amountRequested > user.amount){
+            else if(data.amount > user.amount){
                 return res.status(400).json({ status: false, msg: "Insulficient balance"});
             }
 
@@ -108,20 +93,24 @@ module.exports ={
             else{
                 // save this data in Withdrawal database
                 const newData_ = new Withdrawal({
-                    userId,
-                    amountRequested: data.amountRequested,              
-                    amountPaid: 0,
+                    userId,              
+                    amount: data.amount,
                     walletAddress: data.walletAddress,
+                    coin: data.coin,
                     status: 'pending',
                     currency,
                     resolved: false
                 })
 
+                // remove the amount from the user's account balace
+                await User.findByIdAndUpdate({_id: userId}, {$set: {
+                    amount: user.amount - data.amount
+                }});
+
                 const newData = await newData_.save();
 
                 return res.status(200).json({ status: true, msg: "Pending transaction, will be confirmed within 24 hours", data: newData})
             }
-            
         }
 
         catch(err){
@@ -154,7 +143,14 @@ module.exports ={
             }
             
             else{
-                // save this data in Withdrawal database and change the status to rejected
+                // save this data in Withdrawal database and change the status to rejected and refund the money
+
+                // find the user
+                const user = await User.findOne({_id: withdrawalHx.userId})
+
+                // add the removed amount to the user's account balance
+                await User.findByIdAndUpdate({_id: withdrawalHx.userId}, {$set: {amount: user.amount + withdrawalHx.amount}})
+
                 const data = await Withdrawal.findByIdAndUpdate({_id: id}, {$set: {status: 'rejected'}}, {new: true})
 
                 return res.status(200).json({ status: true, msg: `withdrawal to this wallet ${data.walletAddress} was rejected`, data})
@@ -171,10 +167,10 @@ module.exports ={
             const {id} = req.params
 
             const data = {
-                amountPaid:  Number(DOMPurify.sanitize(req.body.amountPaid))
+                amount:  Number(DOMPurify.sanitize(req.body.amount))
             };
 
-            if(!data.amountPaid){
+            if(!data.amount){
                 return res.status(400).json({ status: false, msg: "All fields are required"});
             }
 
@@ -201,11 +197,11 @@ module.exports ={
             else{
 
                 // check and compare the amounts (amountRequested and amountPaid)
-                if(data.amountPaid > withdrawalHx.amountRequested){
+                if(data.amount > withdrawalHx.amount){
                     return res.status(400).json({status: false, msg: 'amount is more than the requested amount'})
                 }
 
-                else if(data.amountPaid < withdrawalHx.amountRequested){
+                else if(data.amount < withdrawalHx.amount){
                     return res.status(400).json({status: false, msg: 'amount is less than the requested amount'})
                 }
 
@@ -213,7 +209,6 @@ module.exports ={
                     // save this data in Withdrawal database and change the status to rejected
                     const data_ = await Withdrawal.findByIdAndUpdate({_id: id}, {$set: {
                         status: 'confirmed',
-                        amountPaid: data.amountPaid
                     }}, {new: true})
 
                     return res.status(200).json({ status: true, msg: `Transaction confirmed`, data: data_})
@@ -288,6 +283,5 @@ module.exports ={
         catch(err){
             return res.status(500).json({ status: false, msg:"Server error, please contact customer support"})
         }
-    },    
-
+    },
 }

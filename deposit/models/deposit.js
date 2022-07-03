@@ -44,6 +44,10 @@ const schema = new mongoose.Schema(
         comment: {
             type: String,
             default: 'created'
+        },
+        resolved: {
+            type: Boolean,
+            default: false
         }
     },
     {

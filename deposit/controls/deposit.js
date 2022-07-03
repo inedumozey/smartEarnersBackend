@@ -11,8 +11,8 @@ const { Client, resources, Webhook } = require('coinbase-commerce-node');
 
 const PRODUCTION = Boolean(process.env.PRODUCTION);
 
-const API_KEY = process.env.COINBASE_COMMERCE_API_KEY;
-const WEBHOOK_SECRET = process.env.COINBASE_COMMERCE_WEBHOCK_SECRET
+const API_KEY = "326db613-b084-4c42-86b1-05ff3828353b";
+const WEBHOOK_SECRET = "6367d535-8dce-4eea-993f-20bfd23cbfbd"
 
 Client.init(API_KEY);
 const {Charge} = resources;
@@ -23,7 +23,7 @@ const DOMPurify = createDOMPurify(window)
 const DOMAIN = process.env.BACKEND_BASE_URL
 
 module.exports ={
-    
+    // 48NDLTAW
     deposit: async (req, res)=> {
         try{
             
@@ -153,7 +153,6 @@ module.exports ={
 
                 // charge conmfirmed
                 if(event.type === 'charge:confirmed' && depositHx.status === 'charge-pending'){
-                    const amountExpected = Number(depositHx.amountExpected)
                     const amountReceived_ = event.data.payments[0].value.crypto.amount;
                     const cryptocurrency = event.data.payments[0].value.crypto.currency;
 
@@ -161,9 +160,11 @@ module.exports ={
                     const res = await axios.get(`https://api.coinbase.com/v2/exchange-rates?currency=${cryptocurrency}`);
                     const amountReceived = Number(res.data.data.rates.USD) * Number(amountReceived_);
 
+                    const amountReceive = amountReceived.toFixed(8);
+
                     await Deposit.findOneAndUpdate({code: event.data.code}, {$set: {
                         comment: 'successfull',
-                        amountReceived,
+                        amountReceived: amountReceive,
                         status: 'charge-confirmed',
                     }})
                 }
@@ -171,56 +172,60 @@ module.exports ={
                 // charge incorrect payment (overpayment/underpayment)
                 if(event.type === 'charge:failed' && event.data.payments[0] && depositHx.status === 'charge-pending'){
                     const amountExpected = Number(depositHx.amountExpected)
-                    const amountReceived_ = event.data.payments[0].value.crypto.amount;
+                    const amountReceived_ = Number(event.data.payments[0].value.crypto.amount);
                     const cryptocurrency = event.data.payments[0].value.crypto.currency;
-                    const overpayment_threshold = event.data.payment_threshold.overpayment_relative_threshold;
-                    const underpayment_threshold = event.data.payment_threshold.underpayment_relative_threshold;
+                    const overpayment_threshold = Number(event.data.payment_threshold.overpayment_relative_threshold);
+                    const underpayment_threshold = Number(event.data.payment_threshold.underpayment_relative_threshold);
 
                     // convert amount received from whatever the currency paid with to USD
                     const res = await axios.get(`https://api.coinbase.com/v2/exchange-rates?currency=${cryptocurrency}`);
                     const amountReceived = Number(res.data.data.rates.USD) * Number(amountReceived_);
 
+                    const isUnderpaid = (amountReceived < amountExpected) && (amountExpected - amountReceived < underpayment_threshold);
+
+                    const isOverpaid = (amountReceived > amountExpected) && ( amountReceived - amountExpected > (overpayment_threshold - 0.004));
+
                     const resolveComent =()=>{
                         
-                        if((amountReceived > amountExpected) && ( amountReceived - amountExpected > overpayment_threshold)){
-                            return {
-                                comment: 'overpayment',
-                            }
+                        if(isOverpaid){
+                            return "overpayment"
                         }
-                        else if((amountReceived < amountExpected) && (amountExpected - amountReceived < underpayment_threshold)){
-                            return {
-                                comment: 'underpayment',
-                            }
+
+                        else if(isUnderpaid){
+                            return "underpayment"
                         }
                     }
 
                     const resolveOverPayment =()=>{
-                        if(amountReceived > amountExpected && amountReceived - amountExpected > overpayment_threshold){
+                        if(isOverpaid){
                             const amountDiff = amountReceived - amountExpected
-                            return amountDiff
+                            return amountDiff.toFixed(8)
                         }
-                        else{
-                            return null
+
+                        else if(isUnderpaid){
+                            return 0
                         }
                     }
 
                     const resolveUnderPayment =()=>{
-                        if(amountReceived < amountExpected && amountExpected - amountReceived < underpayment_threshold){
+                        if(isUnderpaid){
                             const amountDiff = amountExpected - amountReceived
-                            return amountDiff
+                            return amountDiff.toFixed(8)
                         }
-                        else{
-                            return null
+
+                        else if(isOverpaid){
+                            return 0
                         }
                     }
+                    const amountReceive = amountReceived.toFixed(8);
 
                     await Deposit.findOneAndUpdate({code: event.data.code}, {$set: {
-                        comment: resolveComent().comment,
-                        amountReceived,
+                        amountReceived: amountReceive,
+                        comment: resolveComent(),
                         status: 'charge-confirmed',
                         overPaidBy: resolveOverPayment(),
                         underPaidBy: resolveUnderPayment()
-                    }}, {new: true})
+                    }})
                 }
             }
         }
@@ -228,4 +233,18 @@ module.exports ={
             return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
+
+    resolved: async (req, res)=> {
+        try{
+            
+            const userId = req.user
+            const user = await User.findOne({_id: userId})
+
+
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: err.message})
+        }
+    },
+
 }

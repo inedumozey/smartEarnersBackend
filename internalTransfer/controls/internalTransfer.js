@@ -82,7 +82,7 @@ module.exports ={
                 username: rUser.username,
                 email: rUser.email,
                 accountNumber: rUser.accountNumber,
-                amount: data.amount,
+                amount: data.amount.toFixed(8),
                 currency: currency
             }
 
@@ -161,16 +161,15 @@ module.exports ={
  
             //.........................................................
 
-        
             // handle transactions
             // 1. add the amount to the receiver's account
             await User.findByIdAndUpdate({_id: rUser.id}, {$set: {
-                amount: rUser.amount + data.amount
+                amount: (rUser.amount + data.amount).toFixed(8)
             }}, {new: true})
 
             // 2. remove the amount from sender's account
             await User.findByIdAndUpdate({_id: userId}, {$set: {
-                amount: user.amount - data.amount
+                amount: (user.amount - data.amount).toFixed(8)
             }}, {new: true})
 
             // 3 save data into internal transfer database (transaction) of the sender            
@@ -179,7 +178,7 @@ module.exports ={
                 senderId: userId,
                 receiverId: rUser.id,
                 accountNumber: data.accountNumber,
-                amount: data.amount,
+                amount: data.amount.toFixed(8),
                 currency,
             })
 
@@ -204,20 +203,23 @@ module.exports ={
             
             // if admin, send all the txns
             if(loggeduser.isAdmin){
-                return res.status(200).send({status: true, msg: 'Successful', data: txns})
+                const txnsData = await InternalTransfer.find({}).populate({path: 'senderId'}).populate({path: 'receiverId'});
+
+                return res.status(200).send({status: true, msg: 'Successful', data: txnsData})
             }
 
             else{
 
                 // check if non admin loggedUser is the sender or receiver, then send only his tnxs
-                let data = []
+                let ids = []
                 for(let txn of txns){
                     if(txn.senderId.toString() === userId.toString() || txn.receiverId.toString() === userId.toString()){
-                        data.push(txn)
+                        ids.push(txn._id)
                     }
                 }
 
-                return res.status(200).send({status: true, msg: 'Successful', data})
+                const txnsData = await InternalTransfer.find({_id: ids}).populate({path: 'senderId'}).populate({path: 'receiverId'});
+                return res.status(200).send({status: true, msg: 'Successful', data: txnsData})
             }
         }
         catch(err){
@@ -246,12 +248,16 @@ module.exports ={
             
             // send the txn he requested
             if(loggeduser.isAdmin){
-                return res.status(200).send({status: true, msg: 'Successful', data: txn})
+                const txnData = await InternalTransfer.findOne({_id: id}).populate({path: 'senderId'}).populate({path: 'receiverId'})
+
+                return res.status(200).send({status: true, msg: 'Successful', data: txnData})
             }
 
             // check if non admin loggeduser was the one that did the transfer he requets for
             else if(txn.senderId.toString() === userId.toString() || txn.receiverId.toString() === userId.toString()){
-                return res.status(200).send({status: true, msg: 'Successful', data: txn})
+                const txnData = await InternalTransfer.findOne({_id: id}).populate({path: 'senderId'}).populate({path: 'receiverId'})
+
+                return res.status(200).send({status: true, msg: 'Successful', data: txnData})
             }
 
             // if none of the above, send error

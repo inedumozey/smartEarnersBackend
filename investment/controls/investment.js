@@ -16,7 +16,7 @@ module.exports ={
     getAllPlans: async (req, res)=> {
         try{
                const plans = await InvestmentPlan.find({}).sort({amount: 1});
-               return res.status(200).json({ status: false, msg: "suucessful", data: plans})
+               return res.status(200).json({ status: true, msg: "suucessful", data: plans})
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})

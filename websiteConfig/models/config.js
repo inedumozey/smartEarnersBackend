@@ -80,6 +80,10 @@ const schema = new mongoose.Schema(
             type: Number,
             default: 5000
         },
+        masterPlanAmountLimit: {
+            type: Number,
+            default: 200000
+        },
         withdrawalFactors: [],
         withdrawableCoins: [],
         minDepositLimit: {

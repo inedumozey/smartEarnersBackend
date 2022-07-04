@@ -13,6 +13,9 @@ const schema = new mongoose.Schema(
             ref: 'User',
             required: true,
         },
+        amount: {
+            type: Number
+        },
         rewarded: {
             type: Boolean,
             default: false

@@ -10,6 +10,7 @@ const {JSDOM} = require('jsdom');
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
+const excludeUserFiled = ['-password', '-amount', '-currency', '-isAdmin', '-token', '-isVerified', '-isBlocked', '-hasInvested', '-firstInvestmentPlanValue', '-referralCode', '-referree', '-referrerId', '-hasReturnedReferralRewards', '-createdAt', '-updatedAt', '-accountNumber', '-__v']
 
 module.exports ={
         
@@ -51,7 +52,7 @@ module.exports ={
         try{
             const data = {
                 type:  DOMPurify.sanitize(req.body.type),
-                amount:  parseInt(DOMPurify.sanitize(req.body.amount)),
+                amount:  Number(DOMPurify.sanitize(req.body.amount)),
                 lifespan:  DOMPurify.sanitize(req.body.lifespan),
                 returnPercentage:  DOMPurify.sanitize(req.body.returnPercentage),
             }
@@ -62,9 +63,27 @@ module.exports ={
 
             const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
 
+            const masterPlanAmountLimit = config && config.length >= 1 && config[0].masterPlanAmountLimit ? Number(config[0].masterPlanAmountLimit) : Number(process.env.MASTER_PLAN_AMOUNT_LIMIT);
+
             // validate form input
             if(!data.type || !data.amount || !data.lifespan || !data.returnPercentage){
                 return res.status(500).json({ status: false, msg: "All fields are required"});
+            }
+
+             // check if the plan type is MASTER, then makesure the amount is same as the one in the config
+             if(data.type.toLowerCase() === process.env.MASTER_PLAN_TYPE.toLowerCase() || data.type.toLowerCase() === 'master'){
+
+                // check to makesure the masterPlanAmountLimit is equal to data.amount
+                if(masterPlanAmountLimit !== data.amount){
+                    return res.status(400).json({ status: false, msg: `MASTER PLAN minimun amount is set to be ${masterPlanAmountLimit}, You can change this from config`})
+                }
+            }
+
+            // check if the amount is equal to or more than masterPlanAmountLimit, then the name must be master plan
+            if(data.amount >= masterPlanAmountLimit){
+                if(data.type.toLowerCase() !== process.env.MASTER_PLAN_TYPE.toLowerCase() || data.type.toLowerCase() !== 'master' ){
+                    return res.status(400).json({ status: false, msg: `Since this amount is for MASTER PLAN, the type must be Master `})
+                }
             }
 
             // check to makesure plan types is not already in existance
@@ -75,8 +94,8 @@ module.exports ={
             }
             // save the data to the database
             const newInvestmentPlan = new InvestmentPlan({
-                type: data.type,
-                amount: data.amount,
+                type:  data.type,
+                amount: data.amount.toFixed(8),
                 currency,
                 lifespan: data.lifespan,
                 returnPercentage: data.returnPercentage,
@@ -84,7 +103,7 @@ module.exports ={
 
             await newInvestmentPlan.save();
 
-            return res.status(500).json({ status: false, msg: "successful", data: newInvestmentPlan})
+            return res.status(200).json({ status: true, msg: "successful", data: newInvestmentPlan})
                     
         }
         catch(err){
@@ -97,7 +116,7 @@ module.exports ={
             const {id} = req.params;
             const data = {
                 type:  DOMPurify.sanitize(req.body.type),
-                amount:  parseInt(DOMPurify.sanitize(req.body.amount)),
+                amount:  Number(DOMPurify.sanitize(req.body.amount)),
                 lifespan:  DOMPurify.sanitize(req.body.lifespan),
                 returnPercentage:  DOMPurify.sanitize(req.body.returnPercentage),
             }
@@ -107,6 +126,8 @@ module.exports ={
             const config = await Config.find({});
 
             const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+
+            const masterPlanAmountLimit = config && config.length >= 1 && config[0].masterPlanAmountLimit ? Number(config[0].masterPlanAmountLimit) : Number(process.env.MASTER_PLAN_AMOUNT_LIMIT);
 
             // validate form input
             if(!data.type || !data.amount || !data.lifespan || !data.returnPercentage){
@@ -124,10 +145,26 @@ module.exports ={
                 return res.status(400).json({status: false, msg: "Plan not found"})
             }
 
+            // check if the plan type is MASTER, then makesure the amount is same as the one in the config
+            if(data.type.toLowerCase() === process.env.MASTER_PLAN_TYPE.toLowerCase() || data.type.toLowerCase() === 'master'){
+
+                // check to makesure the masterPlanAmountLimit is equal to data.amount
+                if(masterPlanAmountLimit !== data.amount){
+                    return res.status(400).json({ status: false, msg: `MASTER PLAN minimun amount is set to be ${masterPlanAmountLimit}, You can change this from config`})
+                }
+            }
+
+            // check if the amount is equal to or more than masterPlanAmountLimit, then the name must be master plan
+            if(data.amount >= masterPlanAmountLimit){
+                if(data.type.toLowerCase() !== process.env.MASTER_PLAN_TYPE.toLowerCase() || data.type.toLowerCase() !== 'master' ){
+                    return res.status(400).json({ status: false, msg: `Since this amount is for MASTER PLAN, the type must be Master `})
+                }
+            }
+
             // save the data to the database
             const planData = {
                 type: data.type,
-                amount: data.amount,
+                amount: data.amount.toFixed(8),
                 currency,
                 lifespan: data.lifespan,
                 returnPercentage: data.returnPercentage,
@@ -138,7 +175,7 @@ module.exports ={
             return res.status(200).json({ status: true, msg: "plan updated", data: updatedData})  
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: err.message})
         }
     },
 
@@ -184,6 +221,10 @@ module.exports ={
             const {id} = req.params // planId past in params
             const userId = req.user;
 
+            const data = {
+                amount:  parseInt(DOMPurify.sanitize(req.body.amount)),
+            }
+
             // check item if exist
             if(!mongoose.Types.ObjectId.isValid(id)){
                 return res.status(400).json({status: false, msg: "Plan not found"})
@@ -201,6 +242,8 @@ module.exports ={
             const config = await Config.find({});
 
             const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
+
+            const masterPlanAmountLimit = config && config.length >= 1 && config[0].masterPlanAmountLimit ? Number(config[0].masterPlanAmountLimit) : Number(process.env.MASTER_PLAN_AMOUNT_LIMIT);
 
             // get all plans the user has
             const userPlans = await Investment.find({userId}).populate({path: 'planId'}); // array
@@ -235,45 +278,96 @@ module.exports ={
                     return res.status(400).json({ status: false, msg: "You have this plan running already"})
                 }
                 else{
-                    const data = {
-                        planId: id,
-                        userId,
-                        rewarded: false,
-                        rewards: 0,
-                        currency,
-                        isActive: true
+
+                    // master plan investment
+                    if(data_.amount >= masterPlanAmountLimit){
+
+                        // validate data.amount
+                        if(!data.amount){
+                            return res.status(400).json({ status: false, msg: "All field is required"})
+                        }
+                        if(data.amount < masterPlanAmountLimit){
+                            return res.status(400).json({ status: false, msg: `Minimun amount for MASTER plan is ${masterPlanAmountLimit}`})
+                        }
+
+                        const newData = {
+                            planId: id,
+                            amount: data.amount.toFixed(8),
+                            userId,
+                            rewarded: false,
+                            rewards: 0,
+                            currency,
+                            isActive: true
+                        }
+    
+                        const newInvestment = new Investment(newData);
+                        await newInvestment.save();
+    
+                        // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
+                        // then change hasInvested:true
+                        // get the value(the amount of the plan he selected)
+                        // updated firstInvestmentPlanValue with the planValue
+    
+                        // 1. get the plan value using the plan id
+                        const plan = await InvestmentPlan.findOne({_id: id});
+                        const planValue = parseInt(plan.amount);
+    
+                        // 3. get the user from user database
+                        const user = await User.findOne({_id: userId})
+    
+                        // check if firstInvestmentRewards is null and is hasInvested false, then update the user
+                        if(!user.hasInvested && !user.firstInvestmentPlanValue){
+                            await User.findByIdAndUpdate({_id: userId}, {$set: {
+                                hasInvested: true,
+                                firstInvestmentPlanValue: planValue
+                            }})
+                        }
+                       
+                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: newInvestment})
                     }
 
-                    const newInvestment = new Investment(data);
-                    await newInvestment.save();
-
-                    // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
-                    // then change hasInvested:true
-                    // get the value(the amount of the plan he selected)
-                    // updated firstInvestmentPlanValue with the planValue
-
-                    // 1. get the plan value using the plan id
-                    const plan = await InvestmentPlan.findOne({_id: id});
-                    const planValue = parseInt(plan.amount);
-
-                    // 3. get the user from user database
-                    const user = await User.findOne({_id: userId})
-
-                    // check if firstInvestmentRewards is null and is hasInvested false, then update the user
-                    if(!user.hasInvested && !user.firstInvestmentPlanValue){
-                        await User.findByIdAndUpdate({_id: userId}, {$set: {
-                            hasInvested: true,
-                            firstInvestmentPlanValue: planValue
-                        }})
+                    else{
+                        const data = {
+                            planId: id,
+                            amount: data_.amount.toFixed(8),
+                            userId,
+                            rewarded: false,
+                            rewards: 0,
+                            currency,
+                            isActive: true
+                        }
+    
+                        const newInvestment = new Investment(data);
+                        await newInvestment.save();
+    
+                        // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
+                        // then change hasInvested:true
+                        // get the value(the amount of the plan he selected)
+                        // updated firstInvestmentPlanValue with the planValue
+    
+                        // 1. get the plan value using the plan id
+                        const plan = await InvestmentPlan.findOne({_id: id});
+                        const planValue = parseInt(plan.amount);
+    
+                        // 3. get the user from user database
+                        const user = await User.findOne({_id: userId})
+    
+                        // check if firstInvestmentRewards is null and is hasInvested false, then update the user
+                        if(!user.hasInvested && !user.firstInvestmentPlanValue){
+                            await User.findByIdAndUpdate({_id: userId}, {$set: {
+                                hasInvested: true,
+                                firstInvestmentPlanValue: planValue
+                            }})
+                        }
+                       
+                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: newInvestment})
                     }
-                   
-                    return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: newInvestment})
                 }
                 
             }
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: err.message})
         }
     },
 
@@ -316,7 +410,7 @@ module.exports ={
                     const users = await User.findOne({_id: userId})
     
                     // get the amount
-                    const amount = parseInt(maturedInvestment.planId.amount);
+                    const amount = parseInt(maturedInvestment.amount);
     
                     // get the investment returnPercentage
                     const returnPercentage = parseInt(maturedInvestment.planId.returnPercentage)
@@ -360,24 +454,27 @@ module.exports ={
             const userId = req.user;
 
             // get all investment hx
-            const txns = await Investment.find({}).populate({path: 'planId'});
+            const txns = await Investment.find({});
 
             // get the loggeduser to check if he is the admin
             const loggeduser = await User.findOne({_id: userId})
             
             if(loggeduser.isAdmin){
-                return res.status(200).send({status: true, msg: 'Successful', data: txns})
+                const txnData = await Investment.find({}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                return res.status(200).send({status: true, msg: 'Successful', data: txnData})
             }
 
             else{
-                let data = []
+                let ids = []
                 for(let txn of txns){
                     if(txn.userId.toString() === userId.toString()){
-                        data.push(txn)
+                        ids.push(txn.id)
                     }
                 }
 
-                return res.status(200).send({status: true, msg: 'Successful', data})
+                const txnData = await Investment.find({_id: ids}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+
+                return res.status(200).send({status: true, msg: 'Successful', txnData})
             }
                     
         }
@@ -406,15 +503,16 @@ module.exports ={
             else{
                 // check if the loggeduser is the admin
                 const loggeduser = await User.findOne({_id: userId})
-                console.log(txn.userId)
                 
                 if(loggeduser.isAdmin){
-                    return res.status(200).send({status: true, msg: 'Success', data: txn})
+                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                    return res.status(200).send({status: true, msg: 'Success', data: txnData})
                 }
 
                 // check if the loggeduser was the one that owns the investment hx
                 else if(txn.userId.toString() === userId.toString()){
-                    return res.status(200).send({status: true, msg: 'Success', data: txn})
+                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                    return res.status(200).send({status: true, msg: 'Success', data: txnData})
                 }
                 else{
                     return res.status(400).send({status: true, msg: 'Access denied!'})

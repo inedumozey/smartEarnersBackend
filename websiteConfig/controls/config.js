@@ -92,6 +92,7 @@ module.exports ={
             const minWithdrawalLimit = 5000
             const minDepositLimit = 5000
             const withdrawalCommomDiff = 5000
+            const masterPlanAmountLimit = 200000
             
             const data = {
                 name: req.body.name ? DOMPurify.sanitize(req.body.name) : process.env.COMPANY_NAME ? process.env.COMPANY_NAME : name,
@@ -111,8 +112,10 @@ module.exports ={
                 unverifyUserLifeSpan: req.body.unverifyUserLifeSpan ? Number(DOMPurify.sanitize(req.body.unverifyUserLifeSpan)) : process.env.UNVERIFIED_USER_LIFESPAN ? Number(process.env.UNVERIFIED_USER_LIFESPAN) : Number(unverifyUserLifeSpan),
                 conversionRate: req.body.conversionRate ? Number(DOMPurify.sanitize(req.body.conversionRate)) : process.env.CONVERSION_RATE ? Number(process.env.CONVERSION_RATE) : Number(conversionRate),
                 investmentLimits: req.body.investmentLimits ? Number(DOMPurify.sanitize(req.body.investmentLimits)) : process.env.INVESTMENT_LIMITS ? Number(process.env.INVESTMENT_LIMITS) : investmentLimits,
-                investmentRewardsPercentage: req.body.investmentRewardsPercentage ? Number(DOMPurify.sanitize(req.body.investmentRewardsPercentage)) : process.env.INVESTMENT_REWARDS_PERCENTAGE ? Number(process.env.INVESTMENT_REWARDS_PERCENTAGE) : Number(investmentRewardsPercentage),
 
+                masterPlanAmountLimit: req.body.masterPlanAmountLimit ? Number(DOMPurify.sanitize(req.body.masterPlanAmountLimit)) : process.env.MASTER_PLAN_AMOUNT_LIMIT ? Number(process.env.MASTER_PLAN_AMOUNT_LIMIT) : masterPlanAmountLimit,
+
+                investmentRewardsPercentage: req.body.investmentRewardsPercentage ? Number(DOMPurify.sanitize(req.body.investmentRewardsPercentage)) : process.env.INVESTMENT_REWARDS_PERCENTAGE ? Number(process.env.INVESTMENT_REWARDS_PERCENTAGE) : Number(investmentRewardsPercentage),
                 maxWithdrawalLimit: req.body.maxWithdrawalLimit ? Number(DOMPurify.sanitize(req.body.maxWithdrawalLimit)) : process.env.MAX_WITHDRAWAL_LIMIT ? Number(process.env.MAX_WITHDRAWAL_LIMIT) : Number(maxWithdrawalLimit),
                 minWithdrawalLimit: req.body.minWithdrawalLimit ? Number(DOMPurify.sanitize(req.body.minWithdrawalLimit)) : process.env.MIN_WITHDRAWAL_LIMIT ? Number(process.env.MIN_WITHDRAWAL_LIMIT) : Number(minWithdrawalLimit),
                 minDepositLimit: req.body.minDepositLimit ? Number(DOMPurify.sanitize(req.body.minDepositLimit)) : process.env.MIN_DEPOSIT_LIMIT ? Number(process.env.MIN_DEPOSIT_LIMIT) : Number(minDepositLimit),
@@ -156,6 +159,7 @@ module.exports ={
                 conversionRate: data.conversionRate,
                 investmentLimits: data.investmentLimits,
                 investmentRewardsPercentage: data.investmentRewardsPercentage,
+                masterPlanAmountLimit: data.masterPlanAmountLimit,
                 minDepositLimit: data.minDepositLimit,
                 minWithdrawalLimit: data.minWithdrawalLimit,
                 maxWithdrawalLimit: data.maxWithdrawalLimit,

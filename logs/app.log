@@ -1518,3 +1518,8 @@
 {"level":"info","message":"::1 - - [04/Jul/2022:00:51:01 +0000] \"POST /investment/set-plan/ HTTP/1.1\" 400 43 \"-\" \"PostmanRuntime/7.26.8\"\n"}
 {"level":"info","message":"::1 - - [04/Jul/2022:00:51:14 +0000] \"POST /investment/set-plan/ HTTP/1.1\" 400 43 \"-\" \"PostmanRuntime/7.26.8\"\n"}
 {"level":"info","message":"::1 - - [04/Jul/2022:00:51:19 +0000] \"POST /investment/set-plan/ HTTP/1.1\" 400 43 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [04/Jul/2022:00:54:14 +0000] \"POST /investment/set-plan/ HTTP/1.1\" 200 250 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [04/Jul/2022:00:54:18 +0000] \"POST /investment/set-plan/ HTTP/1.1\" 400 43 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [04/Jul/2022:00:56:28 +0000] \"DELETE /investment/delete-plan/62c23a36aa49b1ade23878e7 HTTP/1.1\" 400 70 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [04/Jul/2022:00:56:42 +0000] \"DELETE /investment/delete-plan/62c23a36aa49b1ade23878e7 HTTP/1.1\" 400 69 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [04/Jul/2022:00:56:56 +0000] \"DELETE /investment/delete-plan/62c23a36aa49b1ade23878e7 HTTP/1.1\" 200 252 \"-\" \"PostmanRuntime/7.26.8\"\n"}

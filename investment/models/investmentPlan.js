@@ -19,11 +19,12 @@ const schema = new mongoose.Schema(
             trim: true
         },
         lifespan: {
-            type: String,
+            type: Number,
+            required: true,
             trim: true // in seconds
         },
         returnPercentage: {
-            type: String,
+            type: Number,
             required: true,
             trim: true
         },

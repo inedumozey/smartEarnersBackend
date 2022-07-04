@@ -41,15 +41,13 @@ module.exports ={
                             const referrerUserIds = referreeUser.referrerId
 
                             // 2. get the referreeUsers firstInvestmentPlanValue
-                            const firstInvestmentPlanValue = parseInt(referreeUser.firstInvestmentPlanValue)
+                            const firstInvestmentPlanValue = Number(referreeUser.firstInvestmentPlanValue)
                             
                             // 3. get investmentRewardsPercentage from config databse
-                            const investmentRewardsPercentage = config && config.length >= 1 && config[0].investmentRewardsPercentage? config[0].investmentRewardsPercentage : process.env.INVESTMENT_REWARDS_PERCENTAGE;
-
-                            const rewardPercentage = parseInt(investmentRewardsPercentage);
+                            const investmentRewardsPercentage = config && config.length >= 1 && config[0].investmentRewardsPercentage? Number(config[0].investmentRewardsPercentage) : Number(process.env.INVESTMENT_REWARDS_PERCENTAGE);
 
                             // 5. calculate the referalRewards
-                            const referralRewards = rewardPercentage / 100 * firstInvestmentPlanValue
+                            const referralRewards = investmentRewardsPercentage / 100 * firstInvestmentPlanValue
 
                             // 4. get their referrerUsers
                             const referrerUsers = await User.find({_id: referrerUserIds});
@@ -78,14 +76,33 @@ module.exports ={
                 }
            }
 
-            const referralRewardData = await ReferralReward.find({}).populate({path: 'referrerId'}).populate({path: 'referreeId'})
-            return res.status(200).json({ status: true, msg: 'success', data: referralRewardData});
+            return res.status(200).json({ status: true, msg: 'success'});
 
         }
         catch(err){
             return res.status(500).json({ status: false, msg: err.message})
         }
     },
+
+    getAllRewards: async (req, res)=> {
+        try{
+           
+
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: err.message})
+        }
+    },
+
+    getRewards: async (req, res)=> {
+        try{
+           
+
+        }
+        catch(err){
+            return res.status(500).json({ status: false, msg: err.message})
+        }
+    }
 }
 
-"Server error, please contact customer service"
+// "Server error, please contact customer service"

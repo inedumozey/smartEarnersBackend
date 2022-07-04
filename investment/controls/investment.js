@@ -10,8 +10,6 @@ const {JSDOM} = require('jsdom');
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
-const excludeUserFiled = ['-password', '-amount', '-currency', '-isAdmin', '-token', '-isVerified', '-isBlocked', '-hasInvested', '-firstInvestmentPlanValue', '-referralCode', '-referree', '-referrerId', '-hasReturnedReferralRewards', '-createdAt', '-updatedAt', '-accountNumber', '-__v']
-
 module.exports ={
         
     getAllPlans: async (req, res)=> {
@@ -34,13 +32,12 @@ module.exports ={
             }
 
             // chekc if the Plan exist
-            const data_ = await InvestmentPlan.findOne({_id: id})
-            if(!data_){
+            const data = await InvestmentPlan.findOne({_id: id})
+            if(!data){
                 return res.status(400).json({status: false, msg: "Plan not found"})
             }
 
-            const plan = await InvestmentPlan.find({_id: id});
-            return res.status(200).json({ status: false, msg: "successful", data: plan})
+            return res.status(200).json({ status: false, msg: "successful", data})
                     
         }
         catch(err){
@@ -53,8 +50,8 @@ module.exports ={
             const data = {
                 type:  DOMPurify.sanitize(req.body.type),
                 amount:  Number(DOMPurify.sanitize(req.body.amount)),
-                lifespan:  DOMPurify.sanitize(req.body.lifespan),
-                returnPercentage:  DOMPurify.sanitize(req.body.returnPercentage),
+                lifespan:  Number(DOMPurify.sanitize(req.body.lifespan)),
+                returnPercentage:  Number(DOMPurify.sanitize(req.body.returnPercentage)),
             }
 
             // get currency from config data if exist otherwise set to the one in env
@@ -115,10 +112,10 @@ module.exports ={
         try{
             const {id} = req.params;
             const data = {
-                type:  DOMPurify.sanitize(req.body.type),
-                amount:  Number(DOMPurify.sanitize(req.body.amount)),
-                lifespan:  DOMPurify.sanitize(req.body.lifespan),
-                returnPercentage:  DOMPurify.sanitize(req.body.returnPercentage),
+                type: DOMPurify.sanitize(req.body.type),
+                amount: Number(DOMPurify.sanitize(req.body.amount)),
+                lifespan: Number(DOMPurify.sanitize(req.body.lifespan)),
+                returnPercentage: Number(DOMPurify.sanitize(req.body.returnPercentage)),
             }
 
             // get currency from config data if exist otherwise set to the one in env
@@ -222,8 +219,11 @@ module.exports ={
             const userId = req.user;
 
             const data = {
-                amount:  parseInt(DOMPurify.sanitize(req.body.amount)),
+                amount:  Number(DOMPurify.sanitize(req.body.amount)),
             }
+
+            // 3. get the user from user database
+            const user = await User.findOne({_id: userId})
 
             // check item if exist
             if(!mongoose.Types.ObjectId.isValid(id)){
@@ -290,6 +290,11 @@ module.exports ={
                             return res.status(400).json({ status: false, msg: `Minimun amount for MASTER plan is ${masterPlanAmountLimit}`})
                         }
 
+                        // check to makesure he does not invest more than his total account balance
+                        if(data.amount > user.amount){
+                            return res.status(400).json({ status: false, msg: "Insufficient balance"})
+                        }
+
                         const newData = {
                             planId: id,
                             amount: data.amount.toFixed(8),
@@ -308,26 +313,30 @@ module.exports ={
                         // get the value(the amount of the plan he selected)
                         // updated firstInvestmentPlanValue with the planValue
     
-                        // 1. get the plan value using the plan id
-                        const plan = await InvestmentPlan.findOne({_id: id});
-                        const planValue = parseInt(plan.amount);
-    
-                        // 3. get the user from user database
-                        const user = await User.findOne({_id: userId})
-    
                         // check if firstInvestmentRewards is null and is hasInvested false, then update the user
                         if(!user.hasInvested && !user.firstInvestmentPlanValue){
                             await User.findByIdAndUpdate({_id: userId}, {$set: {
                                 hasInvested: true,
-                                firstInvestmentPlanValue: planValue
+                                firstInvestmentPlanValue: data.amount.toFixed(8)
                             }})
                         }
+                        
+                        await User.findByIdAndUpdate({_id: userId}, {$set: {
+                            amount: (user.amount - data.amount).toFixed(8)
+                        }})
                        
-                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: newInvestment})
+                        const investmentData =  await Investment.findOne({_id: newInvestment.id}).populate({path: 'planId'})
+                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: investmentData})
                     }
 
                     else{
-                        const data = {
+
+                        // check to makesure he does not invest more than his total account balance
+                        if(data_.amount > user.amount){
+                            return res.status(400).json({ status: false, msg: "Insufficient balance"})
+                        }
+
+                        const newData = {
                             planId: id,
                             amount: data_.amount.toFixed(8),
                             userId,
@@ -337,30 +346,29 @@ module.exports ={
                             isActive: true
                         }
     
-                        const newInvestment = new Investment(data);
+                        const newInvestment = new Investment(newData);
                         await newInvestment.save();
     
                         // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
                         // then change hasInvested:true
                         // get the value(the amount of the plan he selected)
                         // updated firstInvestmentPlanValue with the planValue
-    
-                        // 1. get the plan value using the plan id
-                        const plan = await InvestmentPlan.findOne({_id: id});
-                        const planValue = parseInt(plan.amount);
-    
-                        // 3. get the user from user database
-                        const user = await User.findOne({_id: userId})
+                        // remove the amount he invested from his account balance
     
                         // check if firstInvestmentRewards is null and is hasInvested false, then update the user
                         if(!user.hasInvested && !user.firstInvestmentPlanValue){
                             await User.findByIdAndUpdate({_id: userId}, {$set: {
                                 hasInvested: true,
-                                firstInvestmentPlanValue: planValue
+                                firstInvestmentPlanValue: data_.amount.toFixed(8)
                             }})
                         }
-                       
-                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: newInvestment})
+
+                        await User.findByIdAndUpdate({_id: userId}, {$set: {
+                            amount: (user.amount - data_.amount).toFixed(8)
+                        }})
+
+                        const investmentData =  await Investment.findOne({_id: newInvestment.id}).populate({path: 'planId'})
+                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: investmentData})
                     }
                 }
                 
@@ -390,11 +398,12 @@ module.exports ={
 
                 const createTime = new Date(investment.createdAt).getTime() / 1000 // seconds
                 
-                const investmentLifespan = parseInt(investment.planId.lifespan)
+                const investmentLifespan = Number(investment.planId.lifespan)
 
                 // check for all active investment that have matured
                 if( currentTime - createTime >= investmentLifespan && investment.isActive){
                     maturedInvestments.push(investment)
+
                 }
                 else{
                     activeInvestment.push(investment)
@@ -410,7 +419,8 @@ module.exports ={
                     const users = await User.findOne({_id: userId})
     
                     // get the amount
-                    const amount = parseInt(maturedInvestment.amount);
+                    const amount = Number(maturedInvestment.amount);
+                    // console.log(maturedInvestment.amount)
     
                     // get the investment returnPercentage
                     const returnPercentage = parseInt(maturedInvestment.planId.returnPercentage)
@@ -418,9 +428,9 @@ module.exports ={
                     // calculate the reward
                     const reward = ( returnPercentage / 100) * amount;
 
-                    // update the users account
+                    // update the users account with the amount he invested with and the rewards
                     await User.updateMany({_id: userId}, {$set: {
-                        amount: users.amount + reward
+                        amount: (users.amount + amount + reward).toFixed(8)
                     }}, {new: true})
 
                     // update the investment database, 
@@ -431,20 +441,15 @@ module.exports ={
                     }}, {new: true})    
                 }
 
-                // get all the investments
-                const investments_ = await Investment.find({}).populate({path: 'planId'});
-                return res.status(200).json({ status: true, msg: "success", data: investments_})  
+                return res.status(200).json({ status: true, msg: "success"})  
 
             }else{
-                // get all the investments
-                const investments = await Investment.find({}).populate({path: 'planId'});
-
-                return res.status(200).json({ status: true, msg: "success", data: investments})
+                return res.status(200).json({ status: true, msg: "success"})  
             }
 
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: err.message})
         }
     },
 
@@ -460,7 +465,7 @@ module.exports ={
             const loggeduser = await User.findOne({_id: userId})
             
             if(loggeduser.isAdmin){
-                const txnData = await Investment.find({}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                const txnData = await Investment.find({}).populate({path: 'planId'}).populate({path: 'userId', select: ['_id', 'email', 'username']}).sort({createdAt: -1});
                 return res.status(200).send({status: true, msg: 'Successful', data: txnData})
             }
 
@@ -472,9 +477,9 @@ module.exports ={
                     }
                 }
 
-                const txnData = await Investment.find({_id: ids}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                const txnData = await Investment.find({_id: ids}).populate({path: 'planId'}).populate({path: 'userId', select: ['_id', 'email', 'username']}).sort({createdAt: -1});
 
-                return res.status(200).send({status: true, msg: 'Successful', txnData})
+                return res.status(200).send({status: true, msg: 'Successful', data: txnData})
             }
                     
         }
@@ -505,13 +510,13 @@ module.exports ={
                 const loggeduser = await User.findOne({_id: userId})
                 
                 if(loggeduser.isAdmin){
-                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: ['_id', 'email', 'username']});
                     return res.status(200).send({status: true, msg: 'Success', data: txnData})
                 }
 
                 // check if the loggeduser was the one that owns the investment hx
                 else if(txn.userId.toString() === userId.toString()){
-                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: excludeUserFiled});
+                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: ['_id', 'email', 'username']});
                     return res.status(200).send({status: true, msg: 'Success', data: txnData})
                 }
                 else{

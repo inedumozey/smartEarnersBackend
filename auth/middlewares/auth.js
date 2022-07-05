@@ -12,26 +12,26 @@ module.exports ={
             const authToken = req.headers["authorization"];
            
             if(!authToken){
-                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
             }
             // Verify token
             const token =authToken.split(" ")[1]
 
             const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRET)
             if(!data){
-                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
             }
 
             // Use the data to get the user from User collection
             const user = await User.findOne({_id: data.id });
 
             if(!user){
-                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
             }
 
             //check if user is blocked
             if(user.isBlocked){
-                return res.status(400).json({status: false, msg: "This account is blocked, contact the customer service"})
+                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer support"})
             }
 
             req.user = user._id
@@ -43,9 +43,9 @@ module.exports ={
 
             }
             if(err.message === "jwt expired"){
-                return res.status(400).json({ status: false, msg: "You are not authorized: Please login or register"})
+                return res.status(402).json({ status: false, msg: "You are not authorized: Please login or register"})
             }
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -55,7 +55,7 @@ module.exports ={
             const authToken = req.headers["authorization"];
            
             if(!authToken){
-                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
             }
             // Verify token
             const token =authToken.split(" ")[1]
@@ -64,13 +64,22 @@ module.exports ={
             const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRET)
 
             if(!data){
-                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
             }
 
             // Use the data to get the user from User collection
             const user = await User.findOne({_id: data.id });
             if(!user){
-                return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
+            }
+
+            //check if user is blocked
+            if(user.isBlocked){
+                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer support"})
+            }
+
+            if(!user.isVerified){
+                return res.status(402).json({status: false, msg: "Your account is not verified"})
             }
 
             if(user.isAdmin){
@@ -78,7 +87,7 @@ module.exports ={
                 next()
             } 
             else {
-                return res.status(400).json({status: false, msg: "You are not authorize, please login as Admin"})
+                return res.status(402).json({status: false, msg: "You are not authorize, please login as Admin"})
             }
         }
         catch(err){
@@ -87,9 +96,9 @@ module.exports ={
 
             }
             if(err.message === "jwt expired"){
-                return res.status(400).json({ status: false, msg: "User not authorized: Please login or register"})
+                return res.status(402).json({ status: false, msg: "You are not authorized: Please login or register"})
             }
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -99,7 +108,7 @@ module.exports ={
         const authToken = req.headers["authorization"];
        
         if(!authToken){
-            return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+            return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
         }
         // Verify token
         const token =authToken.split(" ")[1]
@@ -108,13 +117,18 @@ module.exports ={
         const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRET)
 
         if(!data){
-            return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+            return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
         }
 
         // Use the data to get the user from User collection
         const user = await User.findOne({_id: data.id });
         if(!user){
-            return res.status(400).json({status: false, msg: "You are not authorize, please login or register"})
+            return res.status(402).json({status: false, msg: "You are not authorize, please login or register"})
+        }
+
+        //check if user is blocked
+        if(user.isBlocked){
+            return res.status(402).json({status: false, msg: "This account is blocked, please contact customer support"})
         }
 
         if(user.isVerified){
@@ -122,18 +136,18 @@ module.exports ={
             next()
         } 
         else {
-            return res.status(400).json({status: false, msg: "Your account is not verified"})
+            return res.status(402).json({status: false, msg: "Your account is not verified"})
         }
     }
-    catch(err){
-        if(err.message == 'invalid signature' || err.message == 'invalid token'){
-            return res.status(402).json({status: false, msg: "You are not authorized! Please login or register"})
+        catch(err){
+            if(err.message == 'invalid signature' || err.message == 'invalid token'){
+                return res.status(402).json({status: false, msg: "You are not authorized! Please login or register"})
 
+            }
+            if(err.message === "jwt expired"){
+                return res.status(402).json({ status: false, msg: "You are not authorized! Please login or register"})
+            }
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
-        if(err.message === "jwt expired"){
-            return res.status(400).json({ status: false, msg: "User not authorized: Please login or register"})
-        }
-        return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
     }
-}
 }

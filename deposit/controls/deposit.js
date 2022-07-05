@@ -239,8 +239,6 @@ module.exports ={
             
             const userId = req.user
             const user = await User.findOne({_id: userId})
-
-
         }
         catch(err){
             return res.status(500).json({ status: false, msg: err.message})

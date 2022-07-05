@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const InvestmentPlan = mongoose.model("InvestmentPlan");
 const Investment = mongoose.model("Investment");
+const ReferralBonus = mongoose.model("ReferralBonus");
 const User = mongoose.model("User");
 const Config = mongoose.model("Config");
 require("dotenv").config();
@@ -9,6 +10,7 @@ const {JSDOM} = require('jsdom');
 
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
+const PRODUCTION = Boolean(process.env.PRODUCTION);
 
 module.exports ={
         
@@ -18,7 +20,7 @@ module.exports ={
                return res.status(200).json({ status: true, msg: "suucessful", data: plans})
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -28,13 +30,13 @@ module.exports ={
 
             // check id if exist
             if(!mongoose.Types.ObjectId.isValid(id)){
-                return res.status(400).json({status: false, msg: "Plan not found"})
+                return res.status(400).json({status: false, msg: "Not found"})
             }
 
             // chekc if the Plan exist
             const data = await InvestmentPlan.findOne({_id: id})
             if(!data){
-                return res.status(400).json({status: false, msg: "Plan not found"})
+                return res.status(400).json({status: false, msg: "Not found"})
             }
 
             return res.status(200).json({ status: false, msg: "successful", data})
@@ -104,7 +106,7 @@ module.exports ={
                     
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -154,7 +156,7 @@ module.exports ={
             // check if the amount is equal to or more than masterPlanAmountLimit, then the name must be master plan
             if(data.amount >= masterPlanAmountLimit){
                 if(data.type.toLowerCase() !== process.env.MASTER_PLAN_TYPE.toLowerCase() || data.type.toLowerCase() !== 'master' ){
-                    return res.status(400).json({ status: false, msg: `Since this amount is for MASTER PLAN, the type must be Master `})
+                    return res.status(400).json({ status: false, msg: `Since this amount is for MASTER PLAN, the type must be 'Master' `})
                 }
             }
 
@@ -172,7 +174,7 @@ module.exports ={
             return res.status(200).json({ status: true, msg: "plan updated", data: updatedData})  
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -195,7 +197,7 @@ module.exports ={
                     
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -209,7 +211,7 @@ module.exports ={
             return res.status(200).json({ status: true, msg: "All plans deleted", data})     
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -231,9 +233,9 @@ module.exports ={
             }
 
             // check if the plan exist
-            const data_ = await InvestmentPlan.findOne({_id: id})
+            const plan = await InvestmentPlan.findOne({_id: id})
 
-            if(!data_){
+            if(!plan){
                 return res.status(400).json({status: false, msg: "Plan not found"})
             }
 
@@ -244,6 +246,12 @@ module.exports ={
             const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : process.env.NATIVE_CURRENCY;
 
             const masterPlanAmountLimit = config && config.length >= 1 && config[0].masterPlanAmountLimit ? Number(config[0].masterPlanAmountLimit) : Number(process.env.MASTER_PLAN_AMOUNT_LIMIT);
+
+            const referralBonusPercentage = config && config.length >= 1 && config[0].referralBonusPercentage? Number(config[0].referralBonusPercentage) : Number(process.env.REFERRAL_BONUS_PERCENTAGE);
+
+            const referralBonusPercentageForMasterPlan = config && config.length >= 1 && config[0].referralBonusPercentageForMasterPlan? Number(config[0].referralBonusPercentageForMasterPlan) : Number(process.env.REFERRAL_BONUS_PERCENTAGE_FOR_MASTER);
+
+            const referralBonusMaxCountForMasterPlan = PRODUCTION ? (config && config.length >= 1 && config[0].referralBonusMaxCountForMasterPlan? Number(config[0].referralBonusMaxCountForMasterPlan) : Number(process.env.REFERRAL_BONUS_MAX_COUNT_FOR_MASTER_PLAN)) : 3;
 
             // get all plans the user has
             const userPlans = await Investment.find({userId}).populate({path: 'planId'}); // array
@@ -260,7 +268,7 @@ module.exports ={
                 }
 
                 // check for active investment plans, if same with the plan he is requesting for currently, increament samePlan
-                if(userPlan.isActive && userPlan.planId.type === data_.type){
+                if(userPlan.isActive && userPlan.planId.type === plan.type){
                     ++samePlan
                 }
             }
@@ -277,15 +285,17 @@ module.exports ={
                 if(samePlan >= 1){
                     return res.status(400).json({ status: false, msg: "You have this plan running already"})
                 }
+
                 else{
 
-                    // master plan investment
-                    if(data_.amount >= masterPlanAmountLimit){
+                    // master plan investment, check if selected plan amount is equal to or more than the master plan amount limit from config database
+                    if(plan.amount >= masterPlanAmountLimit){
 
                         // validate data.amount
                         if(!data.amount){
                             return res.status(400).json({ status: false, msg: "All field is required"})
                         }
+
                         if(data.amount < masterPlanAmountLimit){
                             return res.status(400).json({ status: false, msg: `Minimun amount for MASTER plan is ${masterPlanAmountLimit}`})
                         }
@@ -297,81 +307,121 @@ module.exports ={
 
                         const newData = {
                             planId: id,
-                            amount: data.amount.toFixed(8),
                             userId,
-                            rewarded: false,
-                            rewards: 0,
+                            amount: data.amount.toFixed(8), // amount from form input, not the plan amount since the user can invest with any amount of money equal to or more than the master plan if he chooses master plan
                             currency,
-                            isActive: true
                         }
     
                         const newInvestment = new Investment(newData);
                         await newInvestment.save();
-    
-                        // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
-                        // then change hasInvested:true
-                        // get the value(the amount of the plan he selected)
-                        // updated firstInvestmentPlanValue with the planValue
-    
-                        // check if firstInvestmentRewards is null and is hasInvested false, then update the user
-                        if(!user.hasInvested && !user.firstInvestmentPlanValue){
-                            await User.findByIdAndUpdate({_id: userId}, {$set: {
-                                hasInvested: true,
-                                firstInvestmentPlanValue: data.amount.toFixed(8)
-                            }})
-                        }
-                        
+
+                        // Update the user database by removing this investment plan amount from their total account balance
                         await User.findByIdAndUpdate({_id: userId}, {$set: {
-                            amount: (user.amount - data.amount).toFixed(8)
+                            amount: (user.amount - data.amount).toFixed(8),
+                            // masterInvestmentCount: user.masterInvestmentCount + 1
                         }})
-                       
-                        const investmentData =  await Investment.findOne({_id: newInvestment.id}).populate({path: 'planId'})
-                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: investmentData})
+    
+                        // check user if masterInvestmentCount is between 0 and referralBonusMaxCountForMasterPlan, if true, he can returns the referral bonus to his referrer, then increment the masterInvestmentCount (This is to make sure he only returns the referral bonus to his referrer gfor only referralBonusMaxCountForMasterPlan times of investment)
+                        if(user.masterInvestmentCount >= 0 && user.masterInvestmentCount <= referralBonusMaxCountForMasterPlan){
+
+                            // check if user was referred by another user, then return their referral bonus to this referrer using their first investment (this is only for the first investment)
+                            if(user.referrerId){
+
+                                // get the referrerUser
+                                const referrerUser = await User.findOne({_id: user.referrerId})
+                                
+                                // calculate the referalBonus
+                                const referralBonus = referralBonusPercentageForMasterPlan / 100 * data.amount;
+
+                                // update the referrer account balance with this referralBonus
+                                await User.findByIdAndUpdate({_id: user.referrerId}, {
+                                    $set: {amount: (referrerUser.amount + referralBonus).toFixed(8)}
+                                })
+
+                                // save new collection in the referralBonus database
+                                const newReferralBonus = new ReferralBonus({
+                                    referrerId: user.referrerId,
+                                    referreeId: userId,
+                                    amount: referralBonus.toFixed(8)
+                                })
+
+                                await newReferralBonus.save()
+                            }
+                        }
+
+                        // update referree user and change hasInvested to true and increment masterInvestmentCount by 1
+                        await User.findByIdAndUpdate({_id: userId}, {
+                            $set: {
+                                hasInvested: true,
+                                masterInvestmentCount: user.masterInvestmentCount + 1
+                            }
+                        })
+                              
+                        const investmentData =  await Investment.findOne({_id: newInvestment.id}).populate({path: 'planId'});
+
+                        return res.status(200).json({ status: true, msg: `You have started investment for ${plan.type}`, data: investmentData})
                     }
 
                     else{
 
                         // check to makesure he does not invest more than his total account balance
-                        if(data_.amount > user.amount){
+                        if(plan.amount > user.amount){
                             return res.status(400).json({ status: false, msg: "Insufficient balance"})
                         }
 
                         const newData = {
                             planId: id,
-                            amount: data_.amount.toFixed(8),
                             userId,
-                            rewarded: false,
-                            rewards: 0,
+                            amount: plan.amount.toFixed(8),
                             currency,
-                            isActive: true
                         }
     
                         const newInvestment = new Investment(newData);
-                        await newInvestment.save();
-    
-                        // As soon as new investment has started, check the user database to see if this is his/her first investment (hasInvested:false and firstInvestmentPlanValue: null)
-                        // then change hasInvested:true
-                        // get the value(the amount of the plan he selected)
-                        // updated firstInvestmentPlanValue with the planValue
-                        // remove the amount he invested from his account balance
-    
-                        // check if firstInvestmentRewards is null and is hasInvested false, then update the user
-                        if(!user.hasInvested && !user.firstInvestmentPlanValue){
-                            await User.findByIdAndUpdate({_id: userId}, {$set: {
-                                hasInvested: true,
-                                firstInvestmentPlanValue: data_.amount.toFixed(8)
-                            }})
-                        }
-
+                        await newInvestment.save();                        
+                                                
+                        // Update the user database by removing this investment plan amount from their total account balance
                         await User.findByIdAndUpdate({_id: userId}, {$set: {
-                            amount: (user.amount - data_.amount).toFixed(8)
-                        }})
+                            amount: (user.amount - plan.amount).toFixed(8),
+                        }});
 
-                        const investmentData =  await Investment.findOne({_id: newInvestment.id}).populate({path: 'planId'})
-                        return res.status(200).json({ status: true, msg: `You have started investment for ${data_.type}`, data: investmentData})
+                         // Check ths user collection in User adatabse to see if this is his/her first investment (hasInvested: false). This will make sure referral bonus is returned to referrer only once (first investment) for those that are someone else's referree
+                        if(!user.hasInvested){
+
+                            // check if user was referred by another user, then return their referral bonus to this referrer using their first investment (this is only for the first investment)
+                            if(user.referrerId){
+
+                                // get the referrerUser
+                                const referrerUser = await User.findOne({_id: user.referrerId})
+                                
+                                // calculate the referalBonus
+                                const referralBonus = referralBonusPercentage / 100 * plan.amount;
+
+                                // update the referrer account balance with this referralBonus
+                                await User.findByIdAndUpdate({_id: user.referrerId}, {
+                                    $set: {amount: (referrerUser.amount + referralBonus).toFixed(8)}
+                                })
+
+                                // save new collection in the referralBonus database
+                                const newReferralBonus = new ReferralBonus({
+                                    referrerId: user.referrerId,
+                                    referreeId: userId,
+                                    amount: referralBonus.toFixed(8)
+                                })
+
+                                await newReferralBonus.save()
+                            }
+
+                            // update referree user and change hasInvested to true
+                            await User.findByIdAndUpdate({_id: userId}, {
+                                $set: {hasInvested: true}
+                            })
+                        }
+                        
+                        const investmentData = await Investment.findOne({_id: newInvestment.id}).populate({path: 'planId'});
+
+                        return res.status(200).json({ status: true, msg: `You have started investment for ${plan.type}`, data: investmentData})
                     }
                 }
-                
             }
         }
         catch(err){
@@ -391,6 +441,7 @@ module.exports ={
             if(!investments){
                 return res.status(200).json({ status: true, msg: "No any investment made"})
             }
+            
 
             // loop through investments
             for(let investment of investments){
@@ -423,7 +474,7 @@ module.exports ={
                     // console.log(maturedInvestment.amount)
     
                     // get the investment returnPercentage
-                    const returnPercentage = parseInt(maturedInvestment.planId.returnPercentage)
+                    const returnPercentage = Number(maturedInvestment.planId.returnPercentage)
     
                     // calculate the reward
                     const reward = ( returnPercentage / 100) * amount;
@@ -441,15 +492,15 @@ module.exports ={
                     }}, {new: true})    
                 }
 
-                return res.status(200).json({ status: true, msg: "success"})  
+                return res.status(200).json({ status: true, msg: "successful"})  
 
             }else{
-                return res.status(200).json({ status: true, msg: "success"})  
+                return res.status(200).json({ status: true, msg: "successful"})  
             }
 
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -484,7 +535,7 @@ module.exports ={
                     
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -506,26 +557,19 @@ module.exports ={
 
             }
             else{
-                // check if the loggeduser is the admin
-                const loggeduser = await User.findOne({_id: userId})
-                
-                if(loggeduser.isAdmin){
-                    const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: ['_id', 'email', 'username']});
-                    return res.status(200).send({status: true, msg: 'Success', data: txnData})
-                }
 
-                // check if the loggeduser was the one that owns the investment hx
-                else if(txn.userId.toString() === userId.toString()){
+                // check if the loggeduser was the one that owns the investment hx or the admin
+                if(txn.userId.toString() === userId.toString() || loggeduser.isAdmin){
                     const txnData = await Investment.findOne({_id: id}).populate({path: 'planId'}).populate({path: 'userId', select: ['_id', 'email', 'username']});
                     return res.status(200).send({status: true, msg: 'Success', data: txnData})
                 }
                 else{
-                    return res.status(400).send({status: true, msg: 'Access denied!'})
+                    return res.status(400).send({status: false, msg: 'Access denied!'})
                 }
             }       
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
     

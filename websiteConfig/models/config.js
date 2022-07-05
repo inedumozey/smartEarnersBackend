@@ -64,9 +64,17 @@ const schema = new mongoose.Schema(
             type: Number,
             default: 2
         },
-        investmentRewardsPercentage: {
+        referralBonusPercentage: {
             type: Number,
             default: 10
+        },
+        referralBonusPercentageForMasterPlan: {
+            type: Number,
+            default: 0.3
+        },
+        referralBonusMaxCountForMasterPlan: {
+            type: Number,
+            default: 30
         },
         minWithdrawalLimit: {
             type: Number,
@@ -85,7 +93,7 @@ const schema = new mongoose.Schema(
             default: 200000
         },
         withdrawalFactors: [],
-        withdrawableCoins: [],
+        withdrawalCoins: [],
         minDepositLimit: {
             type: Number,
             default: 5000

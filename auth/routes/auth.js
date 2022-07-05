@@ -35,10 +35,10 @@ route.put('/block-user/:id', adminAuth, authCrtl.blockUser)
 route.put('/unblock-user/:id', adminAuth, authCrtl.unblockUser)
 
 // only the admin and logged in user will have access to this
-route.delete('/delete-user/:id', userAuth, authCrtl.deleteAccount)
+route.delete('/delete-account/:id', userAuth, authCrtl.deleteAccount)
 
 // delete all users except the admin
 // only the admin will have access to this
-route.delete('/delete-all-users', adminAuth, authCrtl.deleteAllUsers)
+route.delete('/delete-all-accounts', adminAuth, authCrtl.deleteAllUsers)
 
 module.exports = route

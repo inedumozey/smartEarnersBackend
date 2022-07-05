@@ -3,20 +3,13 @@ const {ObjectId} = mongoose.Schema.Types
 
 const schema = new mongoose.Schema(
     {
-        referrerId: {
+        senderId: {
             type: ObjectId,
             ref: 'User'
         },
-        referreeId: {
-            type: ObjectId,
-            ref: 'User'
-        },
-        referralRewards: {
-            type: Number
-        }
     },
     {
         timestamps: true
     }
 )
-mongoose.model("ReferralReward", schema);
+mongoose.model("Notification", schema);

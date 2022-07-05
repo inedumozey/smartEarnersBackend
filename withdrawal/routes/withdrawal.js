@@ -8,7 +8,7 @@ route.get("/get-all-transactions", verifiedUserAuth, withdrawal.getAllTransactio
 route.get("/get-transaction/:id", verifiedUserAuth, withdrawal.getTransaction);
 route.post("/request", verifiedUserAuth, withdrawal.request);
 route.get("/rejected/:id", adminAuth, withdrawal.rejected);
-route.put("/confirmed/:id", adminAuth, withdrawal.confirmed);
+route.put("/confirm/:id", adminAuth, withdrawal.confirm);
 
 
 module.exports = route

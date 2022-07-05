@@ -50,18 +50,22 @@ module.exports ={
 
             const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveArr(process.env.WITHDRAWAL_COINS);
 
+            if(!data.amount || !data.walletAddress){
+                return res.status(400).json({ status: false, msg: "All fields are required"});
+            }
+
             // validate
             if(!data.coin){
-                return res.status(400).json({ status: false, msg: "No coin is selected"});
+                return res.status(400).json({ status: false, msg: "Please select a coin"});
             }
 
             // check if coin selected is valid
             if(!withdrawalCoins.includes(data.coin)){
                 return res.status(400).json({ status: false, msg: "Unsupported coin"});
             }
-
-            if(!data.amount || !data.walletAddress){
-                return res.status(400).json({ status: false, msg: "All fields are required"});
+            
+            if(!withdrawalFactors.includes(data.amount)){
+                return res.status(400).json({ status: false, msg: "Invalid amount"});
             }
 
             // get all Withdrawal hx, and check if the user has a pending transaction
@@ -78,11 +82,7 @@ module.exports ={
             // amount requested for should not be more than their account total balance
             const user = await User.findOne({_id: userId});
 
-            if(!withdrawalFactors.includes(data.amount)){
-                return res.status(400).json({ status: false, msg: "Invalid amount"});
-            }
-
-            else if(data.amount > user.amount){
+            if(data.amount > user.amount){
                 return res.status(400).json({ status: false, msg: "Insulficient balance"});
             }
 
@@ -94,7 +94,7 @@ module.exports ={
                 // save this data in Withdrawal database
                 const newData_ = new Withdrawal({
                     userId,              
-                    amount: data.amount,
+                    amount: (data.amount).toFixed(8),
                     walletAddress: data.walletAddress,
                     coin: data.coin,
                     status: 'pending',
@@ -104,17 +104,18 @@ module.exports ={
 
                 // remove the amount from the user's account balace
                 await User.findByIdAndUpdate({_id: userId}, {$set: {
-                    amount: user.amount - data.amount
+                    amount: (user.amount - data.amount).toFixed(8)
                 }});
 
                 const newData = await newData_.save();
-
-                return res.status(200).json({ status: true, msg: "Pending transaction, will be confirmed within 24 hours", data: newData})
+                
+                const withdrawalData = await Withdrawal.findOne({_id: newData.id}).populate({path: 'userId', select: ['_id', 'username', 'email']})
+                return res.status(200).json({ status: true, msg: "Pending transaction, will be confirmed within 24 hours", data: withdrawalData})
             }
         }
 
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 
@@ -149,11 +150,16 @@ module.exports ={
                 const user = await User.findOne({_id: withdrawalHx.userId})
 
                 // add the removed amount to the user's account balance
-                await User.findByIdAndUpdate({_id: withdrawalHx.userId}, {$set: {amount: user.amount + withdrawalHx.amount}})
+                const newData = await User.findByIdAndUpdate({_id: withdrawalHx.userId}, {$set: {amount: user.amount + withdrawalHx.amount}}, {new: true})
 
-                const data = await Withdrawal.findByIdAndUpdate({_id: id}, {$set: {status: 'rejected'}}, {new: true})
+               // update the Withdrawal database and change the status to rejected
+                await Withdrawal.findByIdAndUpdate({_id: id}, {$set: {
+                    status: 'rejected',
+                }}, {new: true})
+    
+                withdrawalData = await Withdrawal.findOne({_id: withdrawalHx.id}).populate({path: 'userId', select: ['_id', 'username', 'email']})
 
-                return res.status(200).json({ status: true, msg: `withdrawal to this wallet ${data.walletAddress} was rejected`, data})
+                return res.status(200).json({ status: true, msg: `withdrawal to this wallet ${withdrawalData.walletAddress} was rejected`, data: withdrawalData})
             }
         }
         catch(err){
@@ -161,7 +167,7 @@ module.exports ={
         }
     },
 
-    confirmed: async (req, res)=> {
+    confirm: async (req, res)=> {
         try{
             
             const {id} = req.params
@@ -206,7 +212,7 @@ module.exports ={
                 }
 
                 else{
-                    // save this data in Withdrawal database and change the status to rejected
+                    // update the Withdrawal database and change the status to confirmed
                     const data_ = await Withdrawal.findByIdAndUpdate({_id: id}, {$set: {
                         status: 'confirmed',
                     }}, {new: true})

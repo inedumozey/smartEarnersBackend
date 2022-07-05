@@ -6,6 +6,7 @@ const schema = new mongoose.Schema(
     {
         username: {
             type: String,
+            require: true,
             unique: true
         },
         email: {
@@ -19,10 +20,12 @@ const schema = new mongoose.Schema(
             trim: true
         },
         avater:{
-            type: String
+            type: String,
+            default: null
         },
         phone:{
-            type: String
+            type: String,
+            default: null
         },
         amount: {
             type: Number,
@@ -33,7 +36,8 @@ const schema = new mongoose.Schema(
             default: 'SEC'
         },
         accountNumber: {
-            type: String
+            type: String,
+            require: true,
         },
         isAdmin: {
             type: Boolean,
@@ -54,9 +58,6 @@ const schema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        firstInvestmentPlanValue: {
-            type: Number
-        },
         referralCode: {
             type: String,
             require: true,
@@ -70,9 +71,9 @@ const schema = new mongoose.Schema(
             ref: 'User',
             default: null
         },
-        hasReturnedReferralRewards: {
-            type: Boolean,
-            default: false
+        masterInvestmentCount: {
+            type: Number,
+            default: 0
         }
     },
     {

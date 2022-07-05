@@ -56,16 +56,16 @@ module.exports ={
                 newConfig.withdrawalCoins = resolveArr(withdrawalCoins)
 
                 const configs = await newConfig.save()
-                return res.status(200).json({ status: true, msg: "success", data: configs})
+                return res.status(200).json({ status: true, msg: "successful", data: configs})
             }
-
+            
             // otherwise, get the existing ones
-            return res.status(200).json({ status: true, msg: "success", data: config})
-
+            return res.status(200).json({ status: true, msg: "successful", data: config[0]})
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
+        
     },
 
     updateConfig: async (req, res)=> {
@@ -87,38 +87,62 @@ module.exports ={
             const unverifyUserLifeSpan = 0;
             const conversionRate = 500;
             const investmentLimits = 2;
-            const investmentRewardsPercentage = 10;
             const maxWithdrawalLimit = 100000;
             const minWithdrawalLimit = 5000
             const minDepositLimit = 5000
             const withdrawalCommomDiff = 5000
             const masterPlanAmountLimit = 200000
+            const referralBonusPercentage = 10;
+            const referralBonusMaxCountForMasterPlan = 30
+            const referralBonusPercentageForMasterPlan = 0.3
             
             const data = {
                 name: req.body.name ? DOMPurify.sanitize(req.body.name) : process.env.COMPANY_NAME ? process.env.COMPANY_NAME : name,
+
                 bio: req.body.bio ? DOMPurify.sanitize(req.body.bio) : process.env.BIO ? process.env.BIO : bio,
+                
                 benefits: req.body.benefits ? DOMPurify.sanitize(req.body.benefits) : process.env.BENEFITS ? process.env.BENEFITS : benefits,
+
                 contacts: req.body.contacts ? DOMPurify.sanitize(req.body.contacts) : process.env.CONTACTS ? process.env.CONTACTS : contacts,
+
                 withdrawalCoins: req.body.withdrawalCoins ? DOMPurify.sanitize(req.body.withdrawalCoins) : process.env.WITHDRAWAL_COINS ? process.env.WITHDRAWAL_COINS : withdrawalCoins,
+
                 customerSupport: req.body.customerSupport ? DOMPurify.sanitize(req.body.customerSupport) : process.env.CUSTOMER_SUPPORT ? process.env.CUSTOMER_SUPPORT : customerSupport,
+
                 nativeCurrency: req.body.nativeCurrency ? (DOMPurify.sanitize(req.body.nativeCurrency)).toUpperCase() : process.env.NATIVE_CURRENCY ? (process.env.NATIVE_CURRENCY).toUpperCase() : (nativeCurrency).toUpperCase(),
+
                 tradeCurrency: req.body.tradeCurrency ? (DOMPurify.sanitize(req.body.tradeCurrency)).toUpperCase() : process.env.TRADE_CURRENCY ?  (process.env.TRADE_CURRENCY).toUpperCase() : (tradeCurrency).toUpperCase(),
+
                 brandColorA: req.body.brandColorA ? DOMPurify.sanitize(req.body.brandColorA) : process.env.BRAND_COLOR_A ? process.env.BRAND_COLOR_A : brandColorA,
+
                 brandColorB: req.body.brandColorB ? DOMPurify.sanitize(req.body.brandColorB) : process.env.BRAND_COLOR_B ? process.env.BRAND_COLOR_B : brandColorB,
+
                 brandColorC: req.body.brandColorB ? DOMPurify.sanitize(req.body.brandColorC) : process.env.BRAND_COLOR_C ? process.env.BRAND_COLOR_C : brandColorC,
+
                 aboutUs: req.body.aboutUs ? DOMPurify.sanitize(req.body.aboutUs) : process.env.ABOUT_US ? process.env.ABOUT_US : aboutUs,
-                verifyEmail: req.body.verifyEmail ? (DOMPurify.sanitize(req.body.verifyEmail).toLowerCase() === 'yes' ? 'yse' : 'no' )  :  (process.env.VERIFY_EMAIL ? process.env.VERIFY_EMAIL.toLowerCase() === 'yes' ? 'yes' : 'no' : verifyEmail.toLowerCase()),
+
+                verifyEmail: req.body.verifyEmail ? (DOMPurify.sanitize(req.body.verifyEmail).toLowerCase() === 'yes' ? 'yes' : 'no' )  :  (process.env.VERIFY_EMAIL ? process.env.VERIFY_EMAIL.toLowerCase() === 'yes' ? 'yes' : 'no' : verifyEmail.toLowerCase()),
 
                 unverifyUserLifeSpan: req.body.unverifyUserLifeSpan ? Number(DOMPurify.sanitize(req.body.unverifyUserLifeSpan)) : process.env.UNVERIFIED_USER_LIFESPAN ? Number(process.env.UNVERIFIED_USER_LIFESPAN) : Number(unverifyUserLifeSpan),
+
                 conversionRate: req.body.conversionRate ? Number(DOMPurify.sanitize(req.body.conversionRate)) : process.env.CONVERSION_RATE ? Number(process.env.CONVERSION_RATE) : Number(conversionRate),
+
                 investmentLimits: req.body.investmentLimits ? Number(DOMPurify.sanitize(req.body.investmentLimits)) : process.env.INVESTMENT_LIMITS ? Number(process.env.INVESTMENT_LIMITS) : investmentLimits,
 
                 masterPlanAmountLimit: req.body.masterPlanAmountLimit ? Number(DOMPurify.sanitize(req.body.masterPlanAmountLimit)) : process.env.MASTER_PLAN_AMOUNT_LIMIT ? Number(process.env.MASTER_PLAN_AMOUNT_LIMIT) : masterPlanAmountLimit,
 
-                investmentRewardsPercentage: req.body.investmentRewardsPercentage ? Number(DOMPurify.sanitize(req.body.investmentRewardsPercentage)) : process.env.INVESTMENT_REWARDS_PERCENTAGE ? Number(process.env.INVESTMENT_REWARDS_PERCENTAGE) : Number(investmentRewardsPercentage),
+                referralBonusPercentage: req.body.referralBonusPercentage ? Number(DOMPurify.sanitize(req.body.referralBonusPercentage)) : process.env.REFERRAL_BONUS_PERCENTAGE ? Number(process.env.REFERRAL_BONUS_PERCENTAGE) : Number(referralBonusPercentage),
+                
+                referralBonusPercentageForMasterPlan: req.body.referralBonusPercentageForMasterPlan ? Number(DOMPurify.sanitize(req.body.referralBonusPercentageForMasterPlan)) : process.env.REFERRAL_BONUS_PERCENTAGE_FOR_MASTER ? Number(process.env.REFERRAL_BONUS_PERCENTAGE_FOR_MASTER) : Number(referralBonusPercentageForMasterPlan),
+
+                referralBonusMaxCountForMasterPlan: req.body.referralBonusMaxCountForMasterPlan ? Number(DOMPurify.sanitize(req.body.referralBonusMaxCountForMasterPlan)) : process.env.REFERRAL_BONUS_MAX_COUNT_FOR_MASTER_PLAN ? Number(process.env.REFERRAL_BONUS_MAX_COUNT_FOR_MASTER_PLAN) : Number(referralBonusMaxCountForMasterPlan),
+
                 maxWithdrawalLimit: req.body.maxWithdrawalLimit ? Number(DOMPurify.sanitize(req.body.maxWithdrawalLimit)) : process.env.MAX_WITHDRAWAL_LIMIT ? Number(process.env.MAX_WITHDRAWAL_LIMIT) : Number(maxWithdrawalLimit),
+
                 minWithdrawalLimit: req.body.minWithdrawalLimit ? Number(DOMPurify.sanitize(req.body.minWithdrawalLimit)) : process.env.MIN_WITHDRAWAL_LIMIT ? Number(process.env.MIN_WITHDRAWAL_LIMIT) : Number(minWithdrawalLimit),
+
                 minDepositLimit: req.body.minDepositLimit ? Number(DOMPurify.sanitize(req.body.minDepositLimit)) : process.env.MIN_DEPOSIT_LIMIT ? Number(process.env.MIN_DEPOSIT_LIMIT) : Number(minDepositLimit),
+
                 withdrawalCommomDiff: req.body.withdrawalCommomDiff ? Number(DOMPurify.sanitize(req.body.withdrawalCommomDiff)) : process.env.WITHDRAWAL_COMMON_DIFF ? Number(process.env.WITHDRAWAL_COMMON_DIFF) : Number(withdrawalCommomDiff),
             }
 
@@ -158,12 +182,14 @@ module.exports ={
                 unverifyUserLifeSpan: data.unverifyUserLifeSpan,
                 conversionRate: data.conversionRate,
                 investmentLimits: data.investmentLimits,
-                investmentRewardsPercentage: data.investmentRewardsPercentage,
+                referralBonusPercentageForMasterPlan: data.referralBonusPercentageForMasterPlan,
+                referralBonusPercentage: data.referralBonusPercentage,
                 masterPlanAmountLimit: data.masterPlanAmountLimit,
                 minDepositLimit: data.minDepositLimit,
                 minWithdrawalLimit: data.minWithdrawalLimit,
                 maxWithdrawalLimit: data.maxWithdrawalLimit,
                 withdrawalCommomDiff: data.withdrawalCommomDiff,
+                referralBonusMaxCountForMasterPlan: data.referralBonusMaxCountForMasterPlan,
                 withdrawalFactors: resolveWithdrawalFactors()
             }
 
@@ -210,7 +236,7 @@ module.exports ={
                 newConfig.withdrawalCoins = resolveArr(withdrawalCoins)
 
                 const configs = await newConfig.save()
-                return res.status(200).json({ status: true, msg: "success", data: configs})
+                return res.status(200).json({ status: true, msg: "successful", data: configs})
             }
 
             //get the first and only id
@@ -219,10 +245,10 @@ module.exports ={
             //update config
             const configs = await Config.findByIdAndUpdate({_id: id}, {$set: modifiedData }, {new: true});
 
-            return res.status(200).json({ status: true, msg: "Config updated", data: configs})
+            return res.status(200).json({ status: true, msg: "successful", data: configs})
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: err.message})
+            return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
 

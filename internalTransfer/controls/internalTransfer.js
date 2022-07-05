@@ -18,14 +18,13 @@ module.exports ={
 
             // sanitize all elements from the client, incase of fodgery
             const data = {
-                amount:  parseInt(DOMPurify.sanitize(req.body.amount)),
+                amount:  Number(DOMPurify.sanitize(req.body.amount)),
                 accountNumber:  DOMPurify.sanitize(req.body.accountNumber),
             }
 
             if(!data.amount || !data.accountNumber){
-                return res.status(500).json({ status: false, msg: "All fields are required"})
+                return res.status(400).json({ status: false, msg: "All fields are required"})
             }
-
 
              // resolve withdrawal factors incase it's not in the database
              const resolveWithdrawalFactors =()=>{
@@ -53,7 +52,6 @@ module.exports ={
                 return res.status(400).json({ status: false, msg: "Invalid amount"});
             }
 
-
             // get sender's total amount
             const user = await User.findOne({_id: userId})
             if(!user){
@@ -61,8 +59,8 @@ module.exports ={
             }
 
             // check sender's amount, if less than what he is transfering, send error
-            if(parseInt(data.amount) > parseInt(user.amount)){
-                return res.status(500).json({ status: false, msg: "Insufficient balance"})
+            if(Number(data.amount) > Number(user.amount)){
+                return res.status(400).json({ status: false, msg: "Insufficient balance"})
             }
 
             // get the receiver using the account number
@@ -70,12 +68,12 @@ module.exports ={
 
             // validate the account number
             if(!rUser){
-                return res.status(500).json({ status: false, msg: "Invalid account number"})
+                return res.status(400).json({ status: false, msg: "Invalid account number"})
             };
 
             // check to be sure account number does not belongs to the sender
             if(rUser.accountNumber === user.accountNumber){
-                return res.status(500).json({ status: false, msg: "You cannot do transfer to yourself"})
+                return res.status(400).json({ status: false, msg: "You cannot do transfer to yourself"})
             }
 
             const info = {
@@ -105,7 +103,7 @@ module.exports ={
             }
 
             if(!data.amount || !data.accountNumber){
-                return res.status(500).json({ status: false, msg: "All fields are required"})
+                return res.status(400).json({ status: false, msg: "All fields are required"})
             }
 
             // check widthdrawal factors
@@ -139,24 +137,24 @@ module.exports ={
              // get sender's total amount
             const user = await User.findOne({_id: userId})
             if(!user){
-                return res.status(500).json({ status: false, msg: "User not found!"})
+                return res.status(400).json({ status: false, msg: "User not found!"})
             }
 
             // check sender's amount, if less than what he is transfering, send error
-            if(parseInt(data.amount) > parseInt(user.amount)){
-                return res.status(500).json({ status: false, msg: "Insufficient balance"})
+            if(Number(data.amount) >Number(user.amount)){
+                return res.status(400).json({ status: false, msg: "Insufficient balance"})
             }
 
             const rUser = await User.findOne({accountNumber: data.accountNumber});
 
             // validate the account number
             if(!rUser){
-                return res.status(500).json({ status: false, msg: "Invalid account number"})
+                return res.status(400).json({ status: false, msg: "Invalid account number"})
             };
 
             // check to be sure account number does not belongs to the sender
             if(rUser.accountNumber === user.accountNumber){
-                return res.status(500).json({ status: false, msg: "You cannot transfer to yourself"})
+                return res.status(400).json({ status: false, msg: "You cannot transfer to yourself"})
             }
  
             //.........................................................
@@ -249,15 +247,8 @@ module.exports ={
             // check if the loggeduser is the admin
             const loggeduser = await User.findOne({_id: userId})
             
-            // send the txn he requested
-            if(loggeduser.isAdmin){
-                const txnData = await InternalTransfer.findOne({_id: id}).populate({path: 'senderId', select: ['_id', 'username', 'email']}).populate({path: 'receiverId', select: ['_id', 'username', 'email']})
-
-                return res.status(200).send({status: true, msg: 'Successful', data: txnData})
-            }
-
-            // check if non admin loggeduser was the one that did the transfer he requets for
-            else if(txn.senderId.toString() === userId.toString() || txn.receiverId.toString() === userId.toString()){
+            // check if loggeduser was the one that did the transfer he requets for or the admin
+            if(txn.senderId.toString() === userId.toString() || txn.receiverId.toString() === userId.toString() || loggeduser.isAdmin){
                 const txnData = await InternalTransfer.findOne({_id: id}).populate({path: 'senderId', select: ['_id', 'username', 'email']}).populate({path: 'receiverId', select: ['_id', 'username', 'email']})
 
                 return res.status(200).send({status: true, msg: 'Successful', data: txnData})

@@ -890,6 +890,102 @@ post request
 
 
 
+### Signin
+
+post request
+
+ ```
+    /auth/signin
+
+    D: {
+        email: "<email or username>",
+        password: "123456"
+    }
+
+    R: {
+        "status": true,
+        "msg": "You are logged in"
+    }
+```
+* After registration is success, refreshtoken and accesstoken are sent to the brower in cookie, hence the user will be logged (Implement this in the client side)
+
+### Send verification link (on production or development and verify_email is set to yes)
+
+get request
+
+ ```
+    /auth/resend-verification-link
+
+    H: {
+        "Authorization: Bearer <accesstoken>"
+    }
+
+    R: {
+        "status": true,
+        "msg": "email sent",
+        "token": "<if verify_email is set to yes>"
+
+    }
+```
+
+### Verify account
+
+get request
+
+ ```
+    /verify-account?token=<token>
+
+    H: {
+        "Authorization: Bearer <accesstoken>"
+    }
+
+    R: {
+        "status": true,
+        "msg": "Your account is verified",
+
+    }
+```
+
+### Reset password request
+
+post request
+
+ ```
+    /auth/reset-pass-request
+
+    D: {
+        "email": "<email of username>"
+    }
+
+    R: {
+        "status": true,
+        "msg": "Link sent to your email",
+        "token" "<token if on development>"
+
+    }
+```
+
+### Reset password
+
+post request
+
+ ```
+    /auth/reset-pass/?token=<token>
+
+    D: {
+        "email": "<email of username>"
+    }
+
+    R: {
+        "status": true,
+        "msg": "Link sent to your email",
+        "token" "<token if on development>"
+
+    }
+```
+
+* The koken can be pass as query string manually on dev mode or by clicking the link in the email on production mode
+
 ### Get all users
 
 get request

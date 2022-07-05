@@ -15,3 +15,8 @@
 {"level":"info","message":"::1 - - [05/Jul/2022:20:46:49 +0000] \"POST /auth/signup/?refcode=c735990d290 HTTP/1.1\" 200 54 \"-\" \"PostmanRuntime/7.26.8\"\n"}
 {"level":"info","message":"::1 - - [05/Jul/2022:20:47:46 +0000] \"PUT /config/update HTTP/1.1\" 200 1320 \"-\" \"PostmanRuntime/7.26.8\"\n"}
 {"level":"info","message":"::1 - - [05/Jul/2022:20:47:52 +0000] \"POST /auth/signup/?refcode=c735990d290 HTTP/1.1\" 200 183 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [05/Jul/2022:20:48:40 +0000] \"PUT /config/update HTTP/1.1\" 200 1319 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [05/Jul/2022:20:48:54 +0000] \"POST /auth/signup/?refcode=c735990d290 HTTP/1.1\" 200 54 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [05/Jul/2022:20:49:09 +0000] \"PUT /config/update HTTP/1.1\" 200 1320 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [05/Jul/2022:20:49:27 +0000] \"POST /auth/signup/?refcode=c735990d290 HTTP/1.1\" 200 84 \"-\" \"PostmanRuntime/7.26.8\"\n"}
+{"level":"info","message":"::1 - - [05/Jul/2022:21:12:02 +0000] \"GET /auth/verify-account?token=A0OD3ertgP7MxUutfjNamJHbDCLtxeMhM478no-nOJCj9phvZT9oNgMx63pTeeH3rqajTA57od3b9xL6OY4UsQ HTTP/1.1\" 402 73 \"-\" \"PostmanRuntime/7.26.8\"\n"}

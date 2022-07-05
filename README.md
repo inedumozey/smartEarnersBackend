@@ -510,27 +510,14 @@ get request
 ```
 
 
-## REFERRAL REWARDS
+## REFERRAL BONUS
 
-### Resolve
-
-get request
-
- ```
-    /referralReward/resolve/
-
-    R: {
-        "status": true,
-        "msg": "Success",
-    }
-```
-
-### Get all referral rewards
+### Get all referral bonuses
 
 get request
 
  ```
-    /referral-rewards/get-all-rewards/
+    /referral-bonus/get-all-bonuses
 
     H: {
         "Authorization: Bearer <accesstoken>"
@@ -564,12 +551,12 @@ get request
     }
 ```
 
-### Get a referral reward
+### Get a referral bonus
 
 get request
 
  ```
-    referral-rewards/get-reward/<id>
+    referral-bonus/get-bonus/<id>
 
     H: {
         "Authorization: Bearer <accesstoken>"

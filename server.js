@@ -31,7 +31,10 @@ app.use(cookieParser())
 app.use(morgan('combined', { stream: winston.stream }));
 
 // cross-origin request
-var corsOptions = {origin: process.env.FRONTEND_BASE_URL};
+var corsOptions = {
+    origin: process.env.FRONTEND_BASE_URL,
+    credentials: true
+};
 app.use(cors(corsOptions))
 
 // register database model

@@ -556,7 +556,7 @@ get request
 get request
 
  ```
-    referral-bonus/get-bonus/<id>
+    /referral-bonus/get-bonus/<id>
 
     H: {
         "Authorization: Bearer <accesstoken>"
@@ -585,6 +585,27 @@ get request
             "updatedAt": "2022-07-04T04:10:16.658Z",
             "__v": 0
         }
+    }
+```
+
+### Get a referral bonus
+
+put request
+
+ ```
+    /referral-bonus/add-referral-code
+
+    H: {
+        "Authorization: Bearer <accesstoken>"
+    }
+
+    D: {
+        "refcode": "91ce088b6b"
+    }
+
+    R: {
+        "status": true,
+        "msg": "You have been successfully added to the referree list of user3"
     }
 ```
 

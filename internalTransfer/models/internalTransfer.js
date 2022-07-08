@@ -11,6 +11,10 @@ const schema = new mongoose.Schema(
             type: ObjectId,
             ref: 'User'
         },
+        status: {
+            type: Boolean,
+            default: false
+        },
         accountNumber: {
             type: String
         },

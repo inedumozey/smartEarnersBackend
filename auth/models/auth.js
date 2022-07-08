@@ -37,6 +37,7 @@ const schema = new mongoose.Schema(
         },
         accountNumber: {
             type: String,
+            unique: true,
             require: true,
         },
         isAdmin: {
@@ -60,6 +61,7 @@ const schema = new mongoose.Schema(
         },
         referralCode: {
             type: String,
+            require: true,
             require: true,
         },
         referree: [ {

@@ -234,7 +234,7 @@ module.exports ={
         }
     },
 
-    resolved: async (req, res)=> {
+    resolve: async (req, res)=> {
         try{
             
             const userId = req.user

@@ -1323,22 +1323,87 @@ get request
 ```
 
 
-### Update user profile
-
-Pending {coming soon}
+### Upload user profile
 
 put request
 
  ```
-    /update-avater/
+    /upload-user-image
+    
 
     H: {
         "Authorization: Bearer <accesstoken>"
     }
 
-    R: {}
+    D: {
+        "imgae: ""
+    }
+
+    R: {
+        "status": true,
+        "msg": "Profile has been uploaded",
+        "data": {
+            "imageName": "6408e0aecda744bd90d415bd8d57ea38.jpg",
+            "imageSize": 37075,
+            "imagePath": "C:\\Users\\MOZEY\\Desktop\\DEV\\smartEanersBackend/uploads/1657285744335_6408e0aecda744bd90d415bd8d57ea38.jpg",
+            "_id": "62c82c703783ffacf92c8a4d",
+            "__v": 0
+        }
+    }
 ```
 
+### Update user profile
+
+put request
+
+ ```
+   /upload-user-image?id=<id>
+    
+
+    H: {
+        "Authorization: Bearer <accesstoken>"
+    }
+
+    D: {
+        "imgae: ""
+    }
+
+    R: {
+        "status": true,
+        "msg": "Profile has been updated",
+        "data": {
+            "imageName": "6408e0aecda744bd90d415bd8d57ea38.jpg",
+            "imageSize": 37075,
+            "imagePath": "C:\\Users\\MOZEY\\Desktop\\DEV\\smartEanersBackend/uploads/1657285744335_6408e0aecda744bd90d415bd8d57ea38.jpg",
+            "_id": "62c82c703783ffacf92c8a4d",
+            "__v": 0
+        }
+    }
+```
+
+### Remove user profile
+
+delete request
+
+ ```
+    /remove-user-image/<id>
+
+    H: {
+        "Authorization: Bearer <accesstoken>"
+    }
+
+    R: {
+        "status": true,
+        "msg": "Profile image removed",
+        "data": {
+            "_id": "62c82c703783ffacf92c8a4d",
+            "imageName": null,
+            "imageSize": null,
+            "imagePath": null,
+            "__v": 0
+        }
+    }
+```
 
 ## WEBSITE CONFIG
 

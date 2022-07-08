@@ -3,13 +3,17 @@
 const express = require("express")
 const cors = require("cors")
 const morgan = require("morgan")
+const fileupload = require("express-fileupload")
+const http = require("http")
 const cookieParser = require('cookie-parser')
 require('dotenv').config()
 
 const winston = require("./config/winstonConfig")
-const db = require('./config/db')
+const db = require('./config/db');
+const errorResponder = require('./error/catchAll')
 
 const app = express();
+const server = http.createServer(app)
 
 //database
 db()
@@ -37,9 +41,12 @@ var corsOptions = {
 };
 app.use(cors(corsOptions))
 
+app.use(fileupload())
+
 // register database model
 require('./auth/models/auth')
 require('./auth/models/passwordReset')
+require('./auth/models/profileImg')
 require('./websiteConfig/models/config')
 require('./internalTransfer/models/internalTransfer')
 require('./investment/models/investmentPlan')
@@ -59,13 +66,8 @@ app.use(require('./deposit/routes/deposit'));
 app.use('/withdrawal',  require('./withdrawal/routes/withdrawal')); 
 app.use('/notification',  require('./notifications/routes/notification')); 
 
-app.use(function(err, req, res, next){
-    // res.locals.message = err.message;
-    // res.locals.error = req.app.get('env') === 'development' ? err : {};
-    winston.error(`${err.status || 500} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
-    // res.status(err.status || 500)
-});
-
+// Catch all Error Handler
+app.use(errorResponder);
 
 // normalize port
 const normalizePort = (val) => {
@@ -80,30 +82,8 @@ const normalizePort = (val) => {
 
 // connect server
 const PORT = normalizePort(process.env.PORT || "5000")
-const server = app.listen(PORT, ()=>{
+server.listen(PORT, ()=>{
     console.log(`Server connected in port ${PORT}`)
 })
 
-
-//conversion rate (testing)
-const conversionRate = require('./config/conversionRate');
-
-async function run(){
-    const usd = await conversionRate.SEC_TO_USD(50)
-    console.log(usd)
-}
-
-const axios = require('axios')
-async function run(){
-    try{
-        const res = await axios.get(`https://api.coinbase.com/v2/exchange-rates?currency=ltc`);
-        const usd = res.data.data.rates.USD * 0.0001
-        
-
-    }
-    catch(err){
-        console.log(err.message)
-    }
-}
-
-// run()
+// connect websocket using

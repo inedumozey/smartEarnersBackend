@@ -1,6 +1,10 @@
 const mongoose = require('mongoose')
+const path = require("path")
+const fs = require("fs")
+const appRoot = require("app-root-path")
 const User = mongoose.model("User");
 const Config = mongoose.model("Config");
+const ProfileImg = mongoose.model("ProfileImg")
 const PasswordReset = mongoose.model('PasswordReset');
 require("dotenv").config();
 
@@ -22,7 +26,7 @@ module.exports ={
 
     getUsers: async (req, res)=> {
         try{
-           const users = await User.find({}).populate({path: 'referrerId', select: ['_id', 'email', 'username']}).populate({path: 'referree', select: ['_id', 'email', 'username', 'hasReturnedReferralRewards', 'hasInvested', 'firstInvestmentPlanValue']}).sort({createdAt: -1}).select("-password")
+           const users = await User.find({}).populate({path: 'referrerId', select: ['_id', 'email', 'username']}).populate({path: 'referree', select: ['_id', 'email', 'username', 'hasInvested']}).sort({createdAt: -1}).select("-password")
 
            return res.status(200).json({ status: true, msg: "successfull", data: users})
         }
@@ -32,29 +36,22 @@ module.exports ={
     },
 
     getUser: async (req, res)=> {
-       try{
-        const {id } = req.params;
-
-        //check if id is mongoose valid id
-        if(!mongoose.Types.ObjectId.isValid(id)){
-            return res.status(404).json({status: false, msg: `User not found!`})
+        try{
+         const {id } = req.params;
+ 
+         //find user by id, or email or username
+         const paramUser = await User.findOne({$or: [{_id: id}, {id}, {username: id}]}).populate({path: 'referrerId', select: ['_id', 'email', 'username']}).populate({path: 'referree', select: ['_id', 'email', 'username', 'hasInvested']}).select("-password");
+ 
+         if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
+ 
+         // send the user      
+         return res.status(200).json({status: true, msg: 'successfull', data: paramUser});
         }
-
-        //find paramsUser
-        const paramUser = await User.findOne({_id: id}).populate({path: 'referrerId', select: ['_id', 'email', 'username']}).populate({path: 'referree', select: ['_id', 'email', 'username', 'hasReturnedReferralRewards', 'hasInvested', 'firstInvestmentPlanValue']}).select("-password");
-
-        if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
-
-        // send the user      
-        return res.status(200).json({status: true, msg: 'successfull', data: paramUser});
-       }
-
-       catch(err){
-            res.status(500).send({ status: false, msg: "Server error, please contact customer support"})
-       }
+ 
+        catch(err){
+             res.status(500).send({ status: false, msg: "Server error, please contact customer support"})
+        }
     },
-
-
 
     signup: async(req, res)=>{
         try{
@@ -69,8 +66,9 @@ module.exports ={
             }
 
             const { email, username, password, cpassword } = data;
-            if(!email || !password || !cpassword || !username){
-                return res.status(400).json({status: false, msg: "Fill all required fields!"});
+            
+            if(!email || !password || !username){
+                return res.status(400).json({status: false, msg: "All fields are required!"});
 
             }
             else if(password !== cpassword){
@@ -116,8 +114,6 @@ module.exports ={
                 password: hashedPass,
                 currency,
                 hasInvested: false,
-                firstInvestmentPlanValue: null,
-                hasReturnedReferralRewards: false
             })
         
             //send account activation link to the user
@@ -148,11 +144,8 @@ module.exports ={
                     }
                 }
                 
-                return res.status(200).json({status: true, msg: "You are registerd successfully"})
+                return res.status(200).json({status: true, msg: "Registration successful"})
             }
-
-            
-
         }
         catch(err){
             return res.status(500).json({status: false, msg: err.message});
@@ -256,8 +249,6 @@ module.exports ={
         }
     },
 
-
-
     generateAccesstoken: async(req, res)=>{
         try{
             //refresh token passed in req.body from client is used to refresh access token which will then be saved in client token
@@ -311,8 +302,6 @@ module.exports ={
             return res.status(500).json({status: false, msg: "Server error, please contact customer support"});
         }
     },
-
-
 
     resetPassRequest: async(req, res)=>{
         try{
@@ -455,8 +444,6 @@ module.exports ={
         }
     },
 
-
-
     logout: async (req, res)=> {
         try{
         
@@ -491,20 +478,122 @@ module.exports ={
         }
     }, 
 
-    updateAvater: async (req, res)=> {
+    uploadProfileImg: async(req, res) => {
         try{
             const loggedUserId = req.user
-            const { avater } = req.body;
 
-            // update the user with the phone number
-            const user = await User.findByIdAndUpdate({_id: loggedUserId}, {$set: {
-                avater: avater
-            }}, {new: true})
+            const {id} = req.query; //profile image id
+            let file
+            let filePath
+            let allowedExtension = [ ".png", ".jpg", ".jpeg"]
 
-            return res.status(200).json({status: true, msg: "Profile has been updated", data: user});
+            if (!req.files || Object.keys(req.files).length === 0) {
+                    return res.status(400).json({status: false, msg:'No files were uploaded.'});
+            }
+        
+            file = req.files.image
+
+            const extensionName = path.extname(file.name)
+            const allwedSize = 100. //kbs
+
+            if(!allowedExtension.includes(extensionName)){
+                return res.status(400).json({status: false, msg: "Invalid Image" })
+            }
+
+            if(file.size / 1024 > allwedSize){
+                return res.status(400).json({status: false, msg: "Image to large, accepted size is 100kbs and below" })
+            }
+
+            filePath = `${appRoot}/uploads/${Date.now() + "_" + file.name}`;
+
+            file.mv(filePath, async (err) => {
+                if(err){
+                    return res.status(500).json({ status: false, msg: err.message })
+                }
+                
+                // check if id (profile image id) exist
+                if(id){
+
+                    //check if id is mongoose valid id
+                    if(!mongoose.Types.ObjectId.isValid(id)){
+                        return res.status(404).json({status: false, msg: "Not found!"})
+                    }
+                
+                    // update the ProfileImg collection having that id
+                    const img = await ProfileImg.findOne({_id: id})
+
+                    if(!img){
+                        return res.status(404).json({status: false, msg: "Not found!"})
+                    }
+
+                    const imgData = await ProfileImg.findByIdAndUpdate({_id: id}, {$set: {
+                        imageName: file.name,
+                        imageSize: file.size,
+                        imagePath: filePath,
+                    }}, {new: true});
+
+                    // remove the image from uploads dir
+                    const fileExist = fs.existsSync(filePath)
+                    if(fileExist){
+                        fs.unlinkSync(filePath)
+                    }
+
+                    return res.status(200).send({status: true, msg: "Profile has been updated", data: imgData})
+                }
+
+                // otherwise, Save new profile image to ProfileImg Database
+                const newImg = new ProfileImg({
+                    imageName: file.name,
+                    imageSize: file.size,
+                    imagePath: filePath,
+                })
+        
+                let savedImg = await newImg.save()
+
+                // remove the image from uploads dir
+                const fileExist = fs.existsSync(filePath)
+                if(fileExist){
+                    fs.unlinkSync(filePath)
+                }
+
+                await User.findOneAndUpdate({_id: loggedUserId}, {$set: {profileImg: savedImg._id}});
+
+                return res.status(200).send({status: true, msg: "Profile has been uploaded", data: savedImg})
+                
+            })
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact the customer service"})
+            return res.status(500).json({status: false, msg: err.message})
+        }
+    },
+
+    removeProfileImg: async(req, res) => {
+        try{
+
+            const {id} = req.params; //profile image id
+        
+            //check if id is mongoose valid id
+            if(!mongoose.Types.ObjectId.isValid(id)){
+                return res.status(404).json({status: false, msg: "Not found!"})
+            }
+        
+            // update the ProfileImg collection having that id
+            const img = await ProfileImg.findOne({_id: id})
+
+            if(!img){
+                return res.status(404).json({status: false, msg: "Not found!"})
+            }
+
+            const imgData = await ProfileImg.findByIdAndUpdate({_id: id}, {$set: {
+                imageName: null,
+                imageSize: null,
+                imagePath: null,
+            }}, {new: true});
+
+            return res.status(200).send({status: true, msg: "Profile image removed", data: imgData})
+        }
+        catch(err){
+            return res.status(500).json({status: false, msg: "Server error, please contact customer support"})
         }
     },
 

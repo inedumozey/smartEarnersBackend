@@ -1,12 +1,7 @@
 const mongoose = require('mongoose');
-const {ObjectId} = mongoose.Schema.Types
 
 const schema = new mongoose.Schema(
     {
-        userId: {
-            type: ObjectId,
-            ref: 'User'
-        },
         name: {
             type: String,
             default: 'SmartEarners'
@@ -29,7 +24,7 @@ const schema = new mongoose.Schema(
         },
         unverifyUserLifeSpan:{
             type: Number,
-            default: 0 // stays forever
+            default: 0 // in seconds, stays forever 
         },
         conversionRate: {
             type: Number,
@@ -49,11 +44,11 @@ const schema = new mongoose.Schema(
         },
         brandColorB: {
             type: String,
-            default: "rgb(241 173 0)"
+            default: "rgb(241, 173, 0)"
         },
         brandColorC: {
             type: String,
-            default: "rgb(241 173 0)" // change this color later
+            default: "rgb(241, 173, 0)" // change this color later
         },
         verifyEmail: {
             type: String,
@@ -88,7 +83,7 @@ const schema = new mongoose.Schema(
             type: Number,
             default: 5000
         },
-        masterPlanAmountLimit: {
+        masterPlanAmountLimit: { // masterPlanMinAmount
             type: Number,
             default: 200000
         },

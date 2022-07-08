@@ -26,7 +26,9 @@ route.post('/reset-pass', authCrtl.resetPass);
 
 route.put('/update-phone', userAuth, authCrtl.updatePhone);
 
-route.put('/update-avater', userAuth, authCrtl.updateAvater);
+route.put('/upload-user-image', userAuth, authCrtl.uploadProfileImg);
+
+route.delete('/remove-user-image/:id', userAuth, authCrtl.removeProfileImg);
 
 route.delete('/remove-unverified-users', authCrtl.removeUnverifiedUsers)
 

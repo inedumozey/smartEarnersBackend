@@ -178,6 +178,7 @@ module.exports ={
                 accountNumber: data.accountNumber,
                 amount: data.amount.toFixed(8),
                 currency,
+                status: true
             })
 
             const newInternalTransfer_ = await newInternalTransfer.save()

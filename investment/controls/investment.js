@@ -317,8 +317,7 @@ module.exports ={
 
                         // Update the user database by removing this investment plan amount from their total account balance
                         await User.findByIdAndUpdate({_id: userId}, {$set: {
-                            amount: (user.amount - data.amount).toFixed(8),
-                            // masterInvestmentCount: user.masterInvestmentCount + 1
+                            amount: (user.amount - data.amount).toFixed(8)
                         }})
     
                         // check user if masterInvestmentCount is between 0 and referralBonusMaxCountForMasterPlan, if true, he can returns the referral bonus to his referrer, then increment the masterInvestmentCount (This is to make sure he only returns the referral bonus to his referrer gfor only referralBonusMaxCountForMasterPlan times of investment)

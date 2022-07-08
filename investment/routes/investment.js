@@ -4,7 +4,7 @@ const { adminAuth, verifiedUserAuth } = require("../../auth/middlewares/auth")
 
 const route = express.Router()
 
-route.get("/get-all-plans", verifiedUserAuth, investment.getAllPlans);
+route.get("/get-all-plans", investment.getAllPlans);
 route.get("/get-plan/:id", verifiedUserAuth, investment.getPlan);
 route.post("/set-plan", adminAuth, investment.setPlan);
 route.put("/update-plan/:id", adminAuth, investment.updatePlan);

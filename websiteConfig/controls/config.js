@@ -19,7 +19,6 @@ module.exports ={
             if(config.length < 1){
 
                 // create the default
-                // create the default
                 const benefits_ = 'benefit1,benefit2,benefit3,'
                 const contacts_ = 'contact1,contact2,contact3,';
                 const withdrawalCoins_ = 'LITECOIN,DOGECOIN,TRON,USDT(bep20),BUSD(bep20),';
@@ -252,6 +251,7 @@ module.exports ={
         }
     },
 
+    // will be implemented by Marcus
     updateLogo: async (req, res)=> {
         try{
            
@@ -261,6 +261,7 @@ module.exports ={
         }
     },
 
+    // will be implemented by Marcus
     removeLogo: async (req, res)=> {
         try{
            

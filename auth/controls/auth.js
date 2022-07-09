@@ -22,7 +22,7 @@ const setCookie = require('../utils/setCookie');
 const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
-module.exports ={
+module.exports = {
 
     getUsers: async (req, res)=> {
         try{
@@ -245,18 +245,20 @@ module.exports ={
             }
         }
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
+            return res.status(500).json({status: false, msg: err.message});
         }
     },
 
     generateAccesstoken: async(req, res)=>{
         try{
             //refresh token passed in req.body from client is used to refresh access token which will then be saved in client token
-            const authToken = req.headers["authorization"];     
+            const authToken = req.headers["authorization"];    
            
+          
             if(!authToken){
                 return res.status(400).json({status: false, message: "You are not authorize, please login or register"})
             }
+
             // Verify token
             const token =authToken.split(" ")[1]
             
@@ -292,14 +294,10 @@ module.exports ={
             return res.status(200).json({status: true, msg: "Access token refreshed"})
         }
         catch(err){
-            if(err.message == 'invalid signature' || err.message == 'invalid token'){
+            if(err.message == 'invalid signature' || err.message == 'invalid token' || err.message === 'jwt malformed' || err.message === "jwt expired"){
                 return res.status(402).json({status: false, msg: "You are not authorized! Please login or register"})
-
             }
-            if(err.message === "jwt expired"){
-                return res.status(400).json({ status: false, message: "You are not authorized: Please login or register"})
-            }
-            return res.status(500).json({status: false, msg: "Server error, please contact customer support"});
+            return res.status(500).json({status: false, msg: err.message});
         }
     },
 
@@ -488,7 +486,7 @@ module.exports ={
             let allowedExtension = [ ".png", ".jpg", ".jpeg"]
 
             if (!req.files || Object.keys(req.files).length === 0) {
-                    return res.status(400).json({status: false, msg:'No files were uploaded.'});
+                return res.status(400).json({status: false, msg:'No files were uploaded.'});
             }
         
             file = req.files.image
@@ -519,7 +517,7 @@ module.exports ={
                         return res.status(404).json({status: false, msg: "Not found!"})
                     }
                 
-                    // update the ProfileImg collection having that id
+                    // update the ProfileImg collection if the id exist
                     const img = await ProfileImg.findOne({_id: id})
 
                     if(!img){

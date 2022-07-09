@@ -1177,7 +1177,7 @@ Refreshtoken is passed through http header as seen below, new accesstoken and re
 get request
 
  ```
-    /auth/logout
+    /auth/generate-accesstoken
 
     H: {
         "Authorization: Bearer <refreshtoken>"

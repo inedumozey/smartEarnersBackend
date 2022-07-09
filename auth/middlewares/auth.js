@@ -6,8 +6,7 @@ require("dotenv").config();
 
 module.exports ={
 
-    userAuth: async(req, res, next)=> {
-        // Get, access token from header
+    userAuth: async(req, res, next)=>{
         try{
             const authToken = req.headers["authorization"];
            
@@ -38,17 +37,13 @@ module.exports ={
             next()
         }
         catch(err){
-            if(err.message == 'invalid signature' || err.message == 'invalid token'){
+            if(err.message == 'invalid signature' || err.message == 'invalid token' || err.message === 'jwt malformed' || err.message === "jwt expired"){
                 return res.status(402).json({status: false, msg: "You are not authorized! Please login or register"})
-
-            }
-            if(err.message === "jwt expired"){
-                return res.status(402).json({ status: false, msg: "You are not authorized: Please login or register"})
             }
             return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
     },
-
+    
     adminAuth: async(req, res, next)=> {
             // Get access token from header
             try{
@@ -91,12 +86,9 @@ module.exports ={
             }
         }
         catch(err){
-            if(err.message == 'invalid signature' || err.message == 'invalid token'){
+            if(err.message == 'invalid signature' || err.message == 'invalid token' || err.message === 'jwt malformed' || err.message === "jwt expired"){
                 return res.status(402).json({status: false, msg: "You are not authorized! Please login or register"})
 
-            }
-            if(err.message === "jwt expired"){
-                return res.status(402).json({ status: false, msg: "You are not authorized: Please login or register"})
             }
             return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }
@@ -140,12 +132,9 @@ module.exports ={
         }
     }
         catch(err){
-            if(err.message == 'invalid signature' || err.message == 'invalid token'){
+            if(err.message == 'invalid signature' || err.message == 'invalid token' || err.message === 'jwt malformed' || err.message === "jwt expired"){
                 return res.status(402).json({status: false, msg: "You are not authorized! Please login or register"})
 
-            }
-            if(err.message === "jwt expired"){
-                return res.status(402).json({ status: false, msg: "You are not authorized! Please login or register"})
             }
             return res.status(500).json({ status: false, msg: "Server error, please contact customer support"})
         }

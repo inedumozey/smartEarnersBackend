@@ -16,7 +16,16 @@ const app = express();
 const server = http.createServer(app)
 
 //database
-db()
+async function connectDb(){
+    try{
+        db()
+    }
+    catch(err){
+        console.log("Database connection error")
+    }
+}
+
+connectDb()
 
 // parse requests of json type
 app.use(express.json({

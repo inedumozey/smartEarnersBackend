@@ -4,6 +4,7 @@ const { userAuth, adminAuth } = require("../middlewares/auth")
 
 const route = express.Router()
 
+route.get("/authorize", authCrtl.authorize);
 route.get("/get-all-users", adminAuth, authCrtl.getUsers);
 
 route.get("/get-user/:id", userAuth, authCrtl.getUser);

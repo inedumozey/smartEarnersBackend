@@ -1,5 +1,8 @@
 const mongoose = require('mongoose')
 const Config = mongoose.model("Config");
+const path = require("path")
+const fs = require("fs")
+const appRoot = require("app-root-path")
 require("dotenv").config();
 const createDOMPurify = require('dompurify');
 const {JSDOM} = require('jsdom');
@@ -83,6 +86,7 @@ module.exports ={
             const brandColorC = 'rgb(241 173 0)';
             const aboutUs = 'SmartEarners is a trustworthy platform that has been in existence for years serving several financial institutions across the world. We have had major rights and praises of good reputation amongst the section of investment platforms for trading and circular form of rewards.';
             const verifyEmail = 'no';
+            const allowedTransfer = 'yes';
             const unverifyUserLifeSpan = 0;
             const conversionRate = 500;
             const investmentLimits = 2;
@@ -121,6 +125,8 @@ module.exports ={
                 aboutUs: req.body.aboutUs ? DOMPurify.sanitize(req.body.aboutUs) : process.env.ABOUT_US ? process.env.ABOUT_US : aboutUs,
 
                 verifyEmail: req.body.verifyEmail ? (DOMPurify.sanitize(req.body.verifyEmail).toLowerCase() === 'yes' ? 'yes' : 'no' )  :  (process.env.VERIFY_EMAIL ? process.env.VERIFY_EMAIL.toLowerCase() === 'yes' ? 'yes' : 'no' : verifyEmail.toLowerCase()),
+                
+                allowedTransfer: req.body.allowedTransfer ? (DOMPurify.sanitize(req.body.allowedTransfer).toLowerCase() === 'yes' ? 'yes' : 'no' )  :  (process.env.ALLOWED_TRANSFER ? process.env.ALLOWED_TRANSFER.toLowerCase() === 'yes' ? 'yes' : 'no' : allowedTransfer.toLowerCase()),
 
                 unverifyUserLifeSpan: req.body.unverifyUserLifeSpan ? Number(DOMPurify.sanitize(req.body.unverifyUserLifeSpan)) : process.env.UNVERIFIED_USER_LIFESPAN ? Number(process.env.UNVERIFIED_USER_LIFESPAN) : Number(unverifyUserLifeSpan),
 
@@ -177,6 +183,7 @@ module.exports ={
                 brandColorC: data.brandColorC,
                 aboutUs: data.aboutUs,
                 verifyEmail: data.verifyEmail,
+                allowedTransfer: data.allowedTransfer,
 
                 unverifyUserLifeSpan: data.unverifyUserLifeSpan,
                 conversionRate: data.conversionRate,
@@ -254,17 +261,128 @@ module.exports ={
     // will be implemented by Marcus
     updateLogo: async (req, res)=> {
         try{
-           
+            // get all config
+            const config = await Config.find({});
+
+            let file
+            let filePath
+            let allowedExtension = [ ".png", ".jpg", ".jpeg"]
+            let allwedSize = 3072            
+
+            if (!req.files || Object.keys(req.files).length === 0) {
+                return res.status(400).json({status: false, msg:'No files were uploaded.'});
+            }
+          
+            file = req.files.file
+
+            const extensionName = path.extname(file.name)
+            
+            if(!allowedExtension.includes(extensionName)){
+                return res.status(400).json({status: false, msg: "Invalid Image" })
+            }
+
+            if(file.size / 1024 > allwedSize){
+                return res.status(400).json({status: false, msg: `Image to large, accepted size is ${allwedSize / 1024}MBs and below` })
+            }    
+
+            filePath = `${appRoot}/uploads/${Date.now() + "_" + file.name}`;
+            
+
+            // check if document is empty,
+            if(config.length < 1){
+
+                // create the default
+                const benefits_ = 'benefit1,benefit2,benefit3,'
+                const contacts_ = 'contact1,contact2,contact3,';
+                const withdrawalCoins_ = 'LITECOIN,DOGECOIN,TRON,USDT(bep20),BUSD(bep20),';
+
+                const benefits = process.env.BENEFITS ? process.env.BENEFITS : benefits_;
+                const contacts = process.env.CONTACTS ? process.env.CONTACTS : contacts_;
+                const withdrawalCoins = process.env.WITHDRAWAL_COINS ? process.env.WITHDRAWAL_COINS : withdrawalCoins_;
+
+                // convert benefits and contacts into array
+                const resolveArr =(string)=>{
+                    const data = string.split(',')
+                    const dataArr = data.slice(0, data.length-1)
+                    return dataArr
+                }
+
+                // resolve withdrawal factors into arrar
+                const resolveWithdrawalFactors =()=>{
+                    let factors=[]
+                    const minWithdrawalLimit = 5000;
+                    const maxWithdrawalLimit = 100000;
+                    const withdrawalCommomDiff = 5000;
+
+                    for(let i=minWithdrawalLimit; i<=maxWithdrawalLimit; i=i+withdrawalCommomDiff){
+                        factors.push(i)
+                    }
+                    return factors
+                }
+                
+                // create the default
+                const newConfig = new Config({})
+                newConfig.withdrawalFactors = resolveWithdrawalFactors()
+                newConfig.benefits = resolveArr(benefits)
+                newConfig.contacts = resolveArr(contacts)
+                newConfig.withdrawalCoins = resolveArr(withdrawalCoins)
+
+                const configs = await newConfig.save()
+                
+                // update the logo
+                file.mv(filePath, async (err) => {
+                    if(err){
+                        return res.status(500).json({ status: false, msg: err.message })
+                    }
+                    
+                    // save the image in logo field of config
+                    const logo = await Config.findByIdAndUpdate({_id: configs[0].id}, {$set: {logo: filePath}}, {new: true});
+                    
+                    // remove the image from uploads dir
+                    // const fileExist = fs.existsSync(filePath)
+                    // if(fileExist){
+                    //     fs.unlinkSync(filePath)
+                    // }
+
+                    return res.status(200).json({status: true, msg: 'successfull', data: logo})
+                })
+            }
+
+            // if config already exist, update the logo
+            // update the logo
+            file.mv(filePath, async (err) => {
+                if(err){
+                    return res.status(500).json({ status: false, msg: err.message })
+                }
+                
+                // save the image in logo field of config
+                const logo = await Config.findByIdAndUpdate({_id: config[0].id}, {$set: {logo: filePath}}, {new: true});
+                
+                // remove the image from uploads dir
+                // const fileExist = fs.existsSync(filePath)
+                // if(fileExist){
+                //     fs.unlinkSync(filePath)
+                // }
+
+                return res.status(200).json({status: true, msg: 'successfull', data: logo})
+            })
         }
         catch(err){
-            return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})
+            return res.status(500).json({status: false, msg: err.message})
         }
     },
 
     // will be implemented by Marcus
     removeLogo: async (req, res)=> {
         try{
-           
+
+           // get all config
+           const config = await Config.find({});
+
+           // save the image in logo field of config
+           const logo = await Config.findByIdAndUpdate({_id: config[0].id}, {$set: {logo: null}}, {new: true});
+
+           return res.status(200).json({status: true, msg: 'successfull', data: logo})
         }
         catch(err){
             return res.status(500).json({ status: false, msg: "Server error, please contact customer service"})

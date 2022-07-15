@@ -3,6 +3,7 @@
 const express = require("express")
 const cors = require("cors")
 const morgan = require("morgan")
+const nodemailer = require("nodemailer")
 const fileupload = require("express-fileupload")
 const http = require("http")
 const cookieParser = require('cookie-parser')
@@ -14,18 +15,6 @@ const errorResponder = require('./error/catchAll')
 
 const app = express();
 const server = http.createServer(app)
-
-//database
-async function connectDb(){
-    try{
-        db()
-    }
-    catch(err){
-        console.log("Database connection error")
-    }
-}
-
-connectDb()
 
 // parse requests of json type
 app.use(express.json({
@@ -64,6 +53,7 @@ require('./referralBonus/models/referralBonus')
 require('./deposit/models/deposit')
 require('./withdrawal/models/withdrawal')
 require('./notifications/models/notification')
+require('./testimonials/models/testimonials')
 
 // routes
 app.use('/auth',  require("./auth/routes/auth")); 
@@ -74,6 +64,7 @@ app.use('/referral-bonus',  require('./referralBonus/routes/referralBonus'));
 app.use(require('./deposit/routes/deposit')); 
 app.use('/withdrawal',  require('./withdrawal/routes/withdrawal')); 
 app.use('/notification',  require('./notifications/routes/notification')); 
+app.use('/testimonials',  require('./testimonials/routes/testimonials')); 
 
 // Catch all Error Handler
 app.use(errorResponder);
@@ -89,10 +80,19 @@ const normalizePort = (val) => {
     return false
 }
 
+//database
+db()
+
 // connect server
 const PORT = normalizePort(process.env.PORT || "5000")
-server.listen(PORT, ()=>{
-    console.log(`Server connected in port ${PORT}`)
+server.listen(PORT, (err)=>{
+    if(err){
+        console.log(err.message)
+    }
+    else{
+        console.log(`Server connected in port ${PORT}`)
+    }
 })
 
 // connect websocket using
+

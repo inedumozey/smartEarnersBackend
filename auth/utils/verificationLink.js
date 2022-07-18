@@ -89,11 +89,8 @@ module.exports = async(user, res, refcode)=>{
                 if(err.message.includes("ETIMEDOUT")){
                     return res.status(408).json({status: false, msg: "Request Time-out! Check your network connections"})
                 }
-                if(err.message.includes('"Error: Invalid login: 535-5.7.8 Username and Password not accepted.')){
-                    return res.status(400).json({status: false, msg: 'password and username invalid'})
-                }
                 else{
-                    return res.status(400).json({status: false, msg: err.message})
+                    return res.status(500).json({status: false, msg: "Internal Server error, please contact customer support"})
                 }
             }
             else{

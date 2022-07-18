@@ -72,7 +72,7 @@ module.exports = async(data, res)=>{
         const options = {
             from: process.env.EMAIL_USER,
             to: data.email,
-            subject: 'Rest Your Password',
+            subject: 'Reset Your Password',
             html: text,
         }
         
@@ -85,11 +85,11 @@ module.exports = async(data, res)=>{
                     return res.status(408).json({status: false, msg: "Request Time-out! Check your network connections"})
                 }
                 else{
-                    return res.status(400).json({status: false, msg: err.message})
+                    return res.status(500).json({status: false, msg: "Internal Server error, please contact customer support"})
                 }
             }
             else{
-                return res.status(200).json({status: true, msg: `Check your email (${data.email}) to reset your password`});
+                return res.status(200).json({status: true, msg: `Check your email (${data.email}) to reset your password`, token: data.passwordReset.token});
             }
         })                    
 

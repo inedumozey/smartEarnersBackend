@@ -7,6 +7,8 @@ const route = express.Router()
 route.get("/authorize", authCrtl.authorize);
 route.get("/get-all-users", adminAuth, authCrtl.getUsers);
 
+route.get("/get-profile", userAuth, authCrtl.getProfile);
+
 route.get("/get-user/:id", userAuth, authCrtl.getUser);
 
 route.post("/signup", authCrtl.signup);

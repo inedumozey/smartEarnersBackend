@@ -132,6 +132,24 @@ module.exports = {
         }
     },
 
+    getProfile: async (req, res)=> {
+        try{
+            const userId = req.user;
+
+            //find user by id, or email or username
+            const paramUser = await User.findOne({_id: userId}).populate({path: 'referrerId', select: ['_id', 'email', 'username']}).populate({path: 'referree', select: ['_id', 'email', 'username', 'hasInvested']}).select("-password");
+
+            if(!paramUser) res.status(404).json({status: false, msg: `User not found!`});
+
+            // send the user      
+            return res.status(200).json({status: true, msg: 'successfull', data: paramUser});
+        }
+
+        catch(err){
+                res.status(500).send({ status: false, msg: "Server error, please contact customer support"})
+        }
+    },
+
     signup: async(req, res)=>{
         try{
 
@@ -234,6 +252,7 @@ module.exports = {
     resendVerificationLink: async(req, res)=>{
         try{
             const userId = req.user;
+            console.log("userId")
            
             if(!userId){
                 return res.status(402).json({status: false, msg: "User not found"})
@@ -254,7 +273,7 @@ module.exports = {
             verificationLink(user, res)
         }
         catch(err){
-            return res.status(505).json({status: false, msg: "Server error, please contact customer service"});
+            return res.status(505).json({status: false, msg: "Internal Server error, please contact customer service"});
         }
     },
 
@@ -287,7 +306,7 @@ module.exports = {
             }
         }
         catch(err){
-            res.status(500).json({ status: false, message: "Server error, please contact customer support"})
+            res.status(500).json({ status: false, message: "Internal Server error, please contact customer support"})
         }
     },
     
@@ -411,18 +430,22 @@ module.exports = {
                 if(oldUser){
                     const passwordReset = await PasswordReset.findOneAndUpdate({userId: user._id}, {$set: {token: ran.resetToken()}}, {new: true});
                     const data = {email: user.email, passwordReset}
+                    
                     passResetLink(data, res);
                 }
 
-                // otherwise generate and save token and also save the user             
-                const passwordReset = new PasswordReset({
-                    token: ran.resetToken(),
-                    userId: user._id
-                })
+                else{
+                    // otherwise generate and save token and also save the user             
+                    const passwordReset = new PasswordReset({
+                        token: ran.resetToken(),
+                        userId: user._id
+                    })
 
-                await passwordReset.save()
-                const data = {email: user.email, passwordReset}
-                passResetLink(data, res);
+                    await passwordReset.save()
+                    const data = {email: user.email, passwordReset}
+                   
+                    passResetLink(data, res);
+                }
             }
             else{
 
@@ -441,7 +464,7 @@ module.exports = {
 
                 await passwordReset.save()
 
-                return res.status(200).json({status: true, msg: "Reset your password", token: passwordReset.token});
+                return res.status(200).json({status: true, msg: "You will be redirected to reset your password", token: passwordReset.token});
             }
                         
         }
@@ -478,16 +501,12 @@ module.exports = {
                 return res.status(400).json({status: false, msg: "Invalid token"})
             }
                     
+            
             //use the token to find the user
             const user = await User.findOne({_id: token_.userId})
 
             if(!user){
                 return res.status(400).json({status: false, msg: "User not found"});
-            }
-
-            // check if user is blocked
-            if(user.isBlocked){
-                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
             }
             
             // 1. remove the token from PasswordReset model
@@ -496,18 +515,18 @@ module.exports = {
             // 2. update user model with password
             const hashedPass = await bcrypt.hash(data.password, 10);
 
-            await User.findOneAndUpdate({_id: token_.user}, {$set: {password: hashedPass}}, {new: true});
+            await User.findOneAndUpdate({_id: user.id}, {$set: {password: hashedPass}}, {new: true});
 
             // login the user
             const accesstoken = generateAccesstoken(user._id);
             const refreshtoken = generateRefreshtoken(user._id);
 
-            setCookie(accesstoken, refreshtoken, res);
+            setCookie(accesstoken, refreshtoken, res, user);
             
             return res.status(200).json({status: true, msg: "Password Changed and you logged in"})
         }   
         catch(err){
-            return res.status(500).json({status: false, msg: "Server error, please contact customer service"});
+            return res.status(500).json({status: false, msg: err.message});
         }
     },
 

@@ -50,7 +50,7 @@ const schema = new mongoose.Schema(
             type: String,
             default: "rgb(241, 173, 0)" // change this color later
         },
-        allowedTransfer: {
+        allowTransfer: {
             type: String,
             default: 'yes'
         },

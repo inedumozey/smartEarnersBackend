@@ -13,7 +13,7 @@ route.post("/signup", authCrtl.signup);
 
 route.get("/resend-verification-link", userAuth, authCrtl.resendVerificationLink);
 
-route.get("/verify-account", userAuth, authCrtl.verifyAccount);
+route.get("/verify-account", authCrtl.verifyAccount);
 
 route.post("/signin", authCrtl.signin);
 

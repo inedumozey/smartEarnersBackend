@@ -86,7 +86,7 @@ module.exports ={
             const brandColorC = 'rgb(241 173 0)';
             const aboutUs = 'SmartEarners is a trustworthy platform that has been in existence for years serving several financial institutions across the world. We have had major rights and praises of good reputation amongst the section of investment platforms for trading and circular form of rewards.';
             const verifyEmail = 'no';
-            const allowedTransfer = 'yes';
+            const allowTransfer = 'yes';
             const unverifyUserLifeSpan = 0;
             const conversionRate = 500;
             const investmentLimits = 2;
@@ -126,7 +126,7 @@ module.exports ={
 
                 verifyEmail: req.body.verifyEmail ? (DOMPurify.sanitize(req.body.verifyEmail).toLowerCase() === 'yes' ? 'yes' : 'no' )  :  (process.env.VERIFY_EMAIL ? process.env.VERIFY_EMAIL.toLowerCase() === 'yes' ? 'yes' : 'no' : verifyEmail.toLowerCase()),
                 
-                allowedTransfer: req.body.allowedTransfer ? (DOMPurify.sanitize(req.body.allowedTransfer).toLowerCase() === 'yes' ? 'yes' : 'no' )  :  (process.env.ALLOWED_TRANSFER ? process.env.ALLOWED_TRANSFER.toLowerCase() === 'yes' ? 'yes' : 'no' : allowedTransfer.toLowerCase()),
+                allowTransfer: req.body.allowTransfer ? (DOMPurify.sanitize(req.body.allowTransfer).toLowerCase() === 'yes' ? 'yes' : 'no' )  :  (process.env.ALLOW_TRANSFER ? process.env.ALLOW_TRANSFER.toLowerCase() === 'yes' ? 'yes' : 'no' : allowTransfer.toLowerCase()),
 
                 unverifyUserLifeSpan: req.body.unverifyUserLifeSpan ? Number(DOMPurify.sanitize(req.body.unverifyUserLifeSpan)) : process.env.UNVERIFIED_USER_LIFESPAN ? Number(process.env.UNVERIFIED_USER_LIFESPAN) : Number(unverifyUserLifeSpan),
 
@@ -183,7 +183,7 @@ module.exports ={
                 brandColorC: data.brandColorC,
                 aboutUs: data.aboutUs,
                 verifyEmail: data.verifyEmail,
-                allowedTransfer: data.allowedTransfer,
+                allowTransfer: data.allowTransfer,
 
                 unverifyUserLifeSpan: data.unverifyUserLifeSpan,
                 conversionRate: data.conversionRate,

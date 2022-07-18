@@ -8,8 +8,9 @@ const createdYear = new Date().getFullYear();
 const copyrightYear = createdYear > 2022 ? `2022 - ${new Date().getFullYear()}` : '2022'
 
 const email = new Email({
-    username:  process.env.EMAIL_USER,
-    password: process.env.EMAIL_PASS
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+    host: process.env.HOST
 });
 
 module.exports = async(data, res)=>{
@@ -69,8 +70,8 @@ module.exports = async(data, res)=>{
             </div>
         `
         const options = {
-            name: configData.name,
-            receiver: data.email,
+            from: process.env.EMAIL_USER,
+            to: data.email,
             subject: 'Rest Your Password',
             html: text,
         }

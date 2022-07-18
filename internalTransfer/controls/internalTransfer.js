@@ -22,6 +22,21 @@ module.exports ={
                 accountNumber:  DOMPurify.sanitize(req.body.accountNumber),
             }
 
+            // get currency, maxWithdrawalLimit, minWithdrawalLimit, withdrawalCommomDifference and allowTransfer from config data if exist otherwise set to the one in env
+
+            // get all config
+            const config = await Config.find({});
+
+            const allowTransfer = config && config.length >= 1 && config[0].nativeCurrency ? config[0].allowTransfer : (process.env.ALLOW_TRANSFER).toLowerCase();
+
+            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : (process.env.NATIVE_CURRENCY).toUpperCase();
+
+            const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveWithdrawalFactors();
+
+            if(allowTransfer !== 'yes'){
+                return res.status(402).json({ status: false, msg: "Transfer is not currenctly available, please check later"})
+            }
+
             if(!data.amount || !data.accountNumber){
                 return res.status(400).json({ status: false, msg: "All fields are required"})
             }
@@ -38,15 +53,6 @@ module.exports ={
                 }
                 return factors
             }
-
-            // get currency, maxWithdrawalLimit, minWithdrawalLimit and withdrawalCommomDifference from config data if exist otherwise set to the one in env
-
-            // get all config
-            const config = await Config.find({});
-
-            const currency = config && config.length >= 1 && config[0].nativeCurrency ? config[0].nativeCurrency : (process.env.NATIVE_CURRENCY).toUpperCase();
-
-            const withdrawalFactors = config && config.length >= 1 && config[0].withdrawalFactors ? config[0].withdrawalFactors : resolveWithdrawalFactors();
 
             if(!withdrawalFactors.includes(data.amount)){
                 return res.status(400).json({ status: false, msg: "Invalid amount"});

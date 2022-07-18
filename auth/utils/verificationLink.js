@@ -12,8 +12,9 @@ const copyrightYear = createdYear > 2022 ? `2022 - ${new Date().getFullYear()}` 
 const PRODUCTION = Boolean(process.env.PRODUCTION);
 
 const email = new Email({
-    username:  process.env.EMAIL_USER,
-    password: process.env.EMAIL_PASS
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+    host: process.env.HOST
 });
 
 module.exports = async(user, res, refcode)=>{
@@ -74,12 +75,12 @@ module.exports = async(user, res, refcode)=>{
         `
 
         const options = {
-            name: configData.name,
-            receiver: user.email,
+            from: process.env.EMAIL_USER,
+            to: user.email,
             subject: 'Verify Your Account',
             html: text,
         }
-        
+
         email.send(options, async(err, resp)=>{
             if(err){
                 if(err.message.includes("ENOTFOUND")){
@@ -100,7 +101,7 @@ module.exports = async(user, res, refcode)=>{
                 const accesstoken = generateAccesstoken(user._id);
                 const refreshtoken = generateRefreshtoken(user._id);
 
-                setCookie(accesstoken, refreshtoken, res);
+                setCookie(accesstoken, refreshtoken, res, user);
                 const newUser = await user.save();
 
                 // referral
@@ -128,7 +129,7 @@ module.exports = async(user, res, refcode)=>{
         const accesstoken = generateAccesstoken(user._id);
         const refreshtoken = generateRefreshtoken(user._id);
 
-        setCookie(accesstoken, refreshtoken, res);
+        setCookie(accesstoken, refreshtoken, res, user);
 
         const newUser = await user.save();
 

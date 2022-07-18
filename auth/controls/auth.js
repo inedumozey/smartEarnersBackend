@@ -23,21 +23,19 @@ const window = new JSDOM('').window;
 const DOMPurify = createDOMPurify(window)
 
 module.exports = {
-
+ 
     authorize: async(req, res)=>{
         try{
-            console.log("first")
             //refresh token passed in req.body from client is used to refresh access token which will then be saved in client token
             const authToken = req.headers["authorization"];   
             
             const setCookie =(status, type, msg)=>{
                 res.cookie("status", status, {httpOnly: false, secure: false});
                 res.cookie("type", type, {httpOnly: false, secure: false});
-                res.cookie("msg", msg, {httpOnly: false, secure: false});
             }
                        
             if(!authToken){
-                setCookie(false, 'none', "You are not authorized, please login or register")
+                setCookie(false, 'none')
                 return res.status(200).json({status: false, type: 'none', msg: "You are not authorized, please login or register"})
             }
 
@@ -45,53 +43,53 @@ module.exports = {
             const token =authToken.split(" ")[1]
             
             if(!token){
-                setCookie(false, 'none', "You are not authorized, please login or register")
-                return res.status(200).json({status: false, type: 'none', msg: "You not authorized! Please login or register"});
+                setCookie(false, 'none')
+                return res.status(200).json({status: true, type: 'none', msg: "You not authorized! Please login or register"});
             }
 
             //validate token
             const data = await jwt.verify(token, process.env.JWT_ACCESS_SECRET);
                 
             if(!data){
-                setCookie(false, 'none', "Invalid token! Please login or register");
-                return res.status(200).json({status: false, type: 'none', msg: "Invalid token! Please login or register"});
+                setCookie(false, 'none');
+                return res.status(200).json({status: true, type: 'none', msg: "Invalid token! Please login or register"});
             }
            
             // find the user
             const user = await User.findOne({_id: data.id});
 
             if(!user){
-                setCookie(false, 'none',  "You not authorized! Please login or register")
-                return res.status(200).json({status: false,  type: 'none', msg:  "You not authorized! Please login or register"})
+                setCookie(false, 'none')
+                return res.status(200).json({status: true,  type: 'none', msg:  "You not authorized! Please login or register"})
             }
 
             //check if user is blocked
             if(user.isBlocked){
-                setCookie(true, 'blocked', "You account is blocked, please contact customer suuport")
+                setCookie(true, 'blocked')
                 return res.status(200).json({status: true, type: 'blocked', msg: "You account is blocked, please contact customer suuport"})
             }
 
             //check if user is unverified and not blocked
             if(!user.isVerified && !user.isBlocked){
-                setCookie(true, 'unverirified', "You account is not verified")
+                setCookie(true, 'unverirified')
                 return res.status(200).json({status: true, type: 'unverirified', msg: "You account is not verified"})
             }
 
             //check if user is verified and not blocked
             if(user.isVerified && !user.isAdmin && !user.isBlocked){
-                setCookie(true, 'verirified', "You account is not verified")
+                setCookie(true, 'verirified')
                 return res.status(200).json({status: true, type: 'verirified', msg: "Access granted"})
             }
 
             //check if user is an admin and not blocked
             if(user.isVerified && user.isAdmin && !user.isBlocked){
-                setCookie(true, 'admin', "You account is not verified")
+                setCookie(true, 'admin')
                 return res.status(200).json({status: true, type: 'admin', msg: ""})
             }
             //otherwise
             else{
-                setCookie(false, 'blocked', "You account is not verified")
-                return res.status(400).json({status: false, type: 'none', msg: "User not authenticated! Please login or register"})
+                setCookie(false, 'none')
+                return res.status(200).json({status: true, type: 'none', msg: "User not authenticated! Please login or register"})
             }
         }
 
@@ -99,7 +97,7 @@ module.exports = {
             if(err.message == 'invalid signature' || err.message == 'invalid token' || err.message === 'jwt malformed' || err.message === "jwt expired"){
                 return res.status(402).json({status: false, type: 'none', msg: "You are not authorized! Please login or register"})
             }
-            setCookie(false, 'none', "You are not authorized! Please login or register");
+            setCookie(false, 'none');
 
             return res.status(500).json({status: false, msg: "Server error, please contact customer support"});
         }
@@ -274,11 +272,11 @@ module.exports = {
                             
                 }
                 if(user.isBlocked){
-                    return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
+                    return res.status(402).json({status: false, msg: "This account is blocked and cannot be verified, please contact customer support"})
                 }
                 
                 if(user.isVerified){
-                    return res.status(200).json({status: true, msg: "Your account is already verified", isVerified: user.isVerified})
+                    return res.status(200).json({status: true, msg: "Your account has already been verified", isVerified: user.isVerified})
                 }
 
                 user.isVerified = true;
@@ -289,7 +287,7 @@ module.exports = {
             }
         }
         catch(err){
-            res.status(500).json({ status: false, message: "Server error, please contact customer service"})
+            res.status(500).json({ status: false, message: "Server error, please contact customer support"})
         }
     },
     
@@ -392,12 +390,7 @@ module.exports = {
                 return res.status(400).json({status: false, msg: "User not found! Please register"});
             }
 
-            // check if user is blocked
-            if(user.isBlocked){
-                return res.status(402).json({status: false, msg: "This account is blocked, please contact customer service"})
-            }
-
-             // get verifyEmail from config data if exist otherwise set to the one in env
+            // get verifyEmail from config data if exist otherwise set to the one in env
 
             // get all config
             const config = await Config.find({});

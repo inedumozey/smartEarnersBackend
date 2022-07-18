@@ -1,13 +1,14 @@
 const Email = require('@mozeyinedu/email');
+require('dotenv').config()
 
 const email = new Email({
-    host: 'smtp-mail.outlook.com',
-    user: '',
-    pass: '',
+    host: process.env.HOST,
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
 })
 
 email.send({
-    from: 'indeumozey@gmail.com',
+    from: process.env.EMAIL_USER,
     to: 'indeumozey@gmail.com',
     subject: 'Test',
     html: `<h1>testing smtp</h1>`,

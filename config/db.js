@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
-const MOGOURL = process.env.MONGOOSE_UR || `mongodb://localhost:27017/smartEarners`
+require('dotenv').config()
+const MOGOURL = process.env.MONGO_URLt || `mongodb://localhost:27017/smartEarners`
 
 module.exports = async() =>{
     try{
